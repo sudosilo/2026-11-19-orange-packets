@@ -77,14 +77,24 @@ const P=[
  {id:'pizza',n:'Pizza in a Pouch',c:'#e8873a',cost:.08,price:.18,tier:2,rd:250,t:25,req:['pepper','olive'],f:'Peppers, olives, sauce, cheese, regret. Marketed exactly as named.'},
  {id:'pudding',n:'Banana Pudding',c:'#f5dc7a',cost:.07,price:.15,tier:2,rd:400,t:25,f:'Squeeze directly into mouth. Wafer sold separately.'},
  {id:'punch',n:'Fruit Punch Premix',c:'#e0245e',cost:.05,price:.12,tier:2,rd:600,t:30,f:'Just add a gallon of water and a pitcher you do not have.'},
+ {id:'jcherry',n:'Cherry Gelatin',c:'#c8102e',cost:.05,price:.13,tier:2,rd:800,t:30,f:'Wobbles in the packet. Wobbles in the mouth.'},
+ {id:'jlime',n:'Lime Gelatin',c:'#5fbf3a',cost:.05,price:.13,tier:2,rd:950,t:30,f:'Hospital tray energy, now portable.'},
+ {id:'jblue',n:'Blue Raspberry Gelatin',c:'#2b8ce6',cost:.05,price:.14,tier:2,rd:1100,t:30,f:'No raspberry has ever been this blue.'},
  {id:'gravy',n:'Gravy',c:'#8a5a2b',cost:.06,price:.14,tier:3,rd:1200,t:35,f:'Arrives warm somehow. Do not ask.'},
  {id:'milk',n:'Whole Milk',c:'#fbfbf7',cost:.09,price:.22,tier:3,rd:2500,t:40,f:'Expires before you leave the store.'},
  {id:'soda',n:'Carbonated Soda',c:'#6b3a1f',cost:.1,price:.26,tier:3,rd:4000,t:45,f:'Pressurized. Legally a firework in two counties.'},
+ {id:'gcola',n:'Cola Soda Gel',c:'#4a1f0e',cost:.08,price:.24,tier:3,rd:5000,t:45,f:'Soda syrup, but it holds its shape. Special.'},
+ {id:'glime',n:'Lemon Lime Soda Gel',c:'#c9e85a',cost:.08,price:.24,tier:3,rd:5800,t:45,f:'Basically syrup. Do not tell anyone.'},
+ {id:'groot',n:'Root Beer Soda Gel',c:'#6e3b1c',cost:.08,price:.25,tier:3,rd:6600,t:45,f:'Float not included. Foam not possible.'},
+ {id:'evolt',n:'Volt Berry Energy Sauce',c:'#d01fd8',cost:.1,price:.3,tier:4,rd:9000,t:50,f:'Goes on fries. Your heart notices.'},
+ {id:'erush',n:'Blue Rush Energy Sauce',c:'#1fb6ff',cost:.1,price:.3,tier:4,rd:10500,t:50,f:'Tastes like a gas station at 3am.'},
+ {id:'ethund',n:'Tropical Thunder Energy Sauce',c:'#ffb000',cost:.1,price:.31,tier:4,rd:12000,t:50,f:'Mango, pineapple, and a faint hum.'},
  {id:'soup',n:'Hot Soup',c:'#c9692c',cost:.12,price:.3,tier:4,rd:8000,t:50,f:'Tomato. Opens like a geyser.'},
  {id:'egg',n:'Scrambled Egg',c:'#ffd84a',cost:.11,price:.28,tier:4,rd:12000,t:55,f:'One egg. Pre scrambled. Pre regretted.'},
  {id:'spag',n:'Spaghetti',c:'#f0c76b',cost:.14,price:.34,tier:4,rd:18000,t:60,f:'Single noodle, very long, coiled.'},
  {id:'mash',n:'Mashed Potato',c:'#efe3c0',cost:.12,price:.3,tier:5,rd:30000,t:65,f:'Pairs with the Gravy packet. Synergy.'},
  {id:'pickle',n:'Pickle Juice',c:'#9fc23a',cost:.05,price:.2,tier:5,rd:45000,t:70,f:'For athletes, cramps, and the curious.'},
+ {id:'spickle',n:'Spicy Pickle Juice',c:'#c8c21a',cost:.06,price:.24,tier:5,rd:55000,t:70,f:'Pickle juice that fights back.'},
  {id:'cheese',n:'Melted Cheese',c:'#ffb81c',cost:.15,price:.38,tier:5,rd:70000,t:75,f:'Stays melted forever. Science cannot explain it.'},
  {id:'oat',n:'Oatmeal',c:'#d8c39a',cost:.1,price:.3,tier:6,rd:110000,t:80,f:'Lumpy by design.'},
  {id:'brew',n:'Cold Brew',c:'#3b2416',cost:.18,price:.45,tier:6,rd:160000,t:85,f:'Eleven sips of pure jitters.'},
@@ -112,8 +122,15 @@ const HEADS=[
  'Shipping department requests the word "squeeze" be banned from meetings.',
  'Somebody tried to microwave the Melted Cheese packet. It got more melted.'
 ];
+const CAMPS=[
+ {n:'Flyer Drop',c:20,t:60,m:2,f:'Interns staple flyers to every pole in town.'},
+ {n:'Radio Jingle',c:150,t:90,m:3,f:'A jingle nobody can get out of their head.'},
+ {n:'Billboard Blitz',c:1500,t:120,m:4,f:'A giant packet over the freeway.'},
+ {n:'Food Truck Tour',c:8000,t:120,m:5,f:'Free samples squirted at strangers.'},
+ {n:'Late Night TV Spot',c:40000,t:150,m:7,f:'But wait, there is more packet.'}
+];
 let S;
-function fresh(){const s={cash:5,fame:0,tapLv:1,lineLv:1,mkt:1,flat:.25,owned:{},lines:{},stock:{},hits:{},rd:null,won:false,earned:0,start:Date.now()};
+function fresh(){const s={cash:5,fame:0,tapLv:1,lineLv:1,mkt:1,flat:.25,owned:{},lines:{},stock:{},hits:{},rd:null,camp:null,demand:1,won:false,earned:0,start:Date.now()};
  STAPLE.forEach(id=>{s.owned[id]=1;s.lines[id]=0;s.stock[id]=0});return s}
 function load(){try{const r=localStorage.getItem('packetbaron1');S=r?Object.assign(fresh(),JSON.parse(r)):fresh()}catch(e){S=fresh()}}
 function save(){try{localStorage.setItem('packetbaron1',JSON.stringify(S))}catch(e){}}
@@ -144,12 +161,16 @@ function finishRD(){const p=byId(S.rd.id);S.owned[p.id]=1;S.lines[p.id]=0;S.stoc
  if(!galleryOpen()&&novelCount()===2)say('One more invention and the Packet Gallery can open.');
  if(galleryOpen()&&novelCount()===3){pop('THE PACKET GALLERY IS OPEN','Customers grab handfuls of whatever they want and pay one flat price per packet. More kinds on the shelf brings more people.');$('galTab').classList.remove('lock')}
  draw()}
+function campMult(){return S.camp?S.camp.m:1}
+function demandMult(){return (S.demand||1)*campMult()*(1+S.fame/400)}
+function runCamp(i){const c=CAMPS[i];if(S.camp||S.cash<c.c)return;S.cash-=c.c;S.camp={n:c.n,m:c.m,left:c.t,tot:c.t};say(c.n+' launched. Demand x'+c.m+'.');draw()}
 const UP=[
  {k:'tapLv',n:'Bigger Squeezer',d:'Doubles packets per squeeze.',c:l=>25*Math.pow(6,l-1)},
  {k:'lineLv',n:'Faster Lines',d:'Every line runs 50 percent faster.',c:l=>60*Math.pow(5,l-1)},
+ {k:'demand',n:'Distributor Deal',d:'Wholesale buyers take 50 percent more packets, forever.',c:l=>40*Math.pow(5,l-1)},
  {k:'mkt',n:'Gallery Billboard',d:'50 percent more Gallery customers.',c:l=>300*Math.pow(4,l-1)}
 ];
-function buyUp(i){const u=UP[i],c=u.c(S[u.k]);if(S.cash<c)return;S.cash-=c;S[u.k]=u.k==='mkt'?S.mkt+0.5:S[u.k]+1;if(u.k==='mkt')S.mkt=Math.round(S.mkt*10)/10;say(u.n+' purchased.');draw()}
+function buyUp(i){const u=UP[i],lv=u.k==='demand'?Math.round((S.demand-1)*2+1):S[u.k],c=u.c(lv);if(S.cash<c)return;S.cash-=c;if(u.k==='mkt'||u.k==='demand'){S[u.k]=Math.round((S[u.k]+0.5)*10)/10}else S[u.k]+=1;say(u.n+' purchased.');draw()}
 function setFlat(v){S.flat=parseFloat(v);$('flatv').textContent=money(S.flat);$('custv').textContent=custRate().toFixed(2)+' customers per second'}
 function reset(){if(!window.__r){window.__r=1;say('Tap Start Over again to wipe the company.');setTimeout(()=>window.__r=0,3000);return}S=fresh();save();log=[];say('A new packet empire begins.');draw()}
 function pk(c){return '<div class="pk" style="background:'+c+'"></div>'}
@@ -160,6 +181,7 @@ function draw(){
  $('galTab').classList.toggle('lock',!galleryOpen());
  let h='';
  if(tab==='factory'){
+  h+='<div class="card"><div class="name">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind. Run campaigns in the Office.</div></div>';
   h+='<h3>Your packets</h3>';
   ownedList().forEach(p=>{const lc=lineCost(p.id);
    h+='<div class="card"><div class="row">'+pk(p.c)+'<div class="grow"><div class="name">'+p.n+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+'</div><div class="meta">Stock '+num(S.stock[p.id]||0)+' . Lines '+(S.lines[p.id]||0)+' . Cost '+money(p.cost)+' . Wholesale '+money(p.price)+'</div></div></div>'+
@@ -181,8 +203,11 @@ function draw(){
    h+='<div class="card"><div class="name">On the shelf: '+variety()+' kinds</div><div class="shelf">'+ownedList().map(p=>'<div class="bin">'+pk((S.stock[p.id]||0)>=1?p.c:'#eee')+num(S.stock[p.id]||0)+'</div>').join('')+'</div></div>';}
  }
  if(tab==='office'){
+  h+='<h3>Marketing campaigns</h3>';
+  if(S.camp)h+='<div class="card"><div class="name">'+S.camp.n+' running<span class="tag hit">demand x'+S.camp.m+'</span></div><div class="meta">'+Math.ceil(S.camp.left)+'s left</div><div class="bar"><i style="width:'+(100-S.camp.left/S.camp.tot*100)+'%"></i></div></div>';
+  CAMPS.forEach((c,i)=>{h+='<div class="card"><div class="name">'+c.n+'<span class="tag">x'+c.m+' for '+c.t+'s</span></div><div class="flav">'+c.f+'</div><div class="btns"><button class="act ok" '+(S.camp||S.cash<c.c?'disabled':'')+' onclick="runCamp('+i+')">Launch '+money(c.c)+'</button></div></div>'});
   h+='<h3>Upgrades</h3>';
-  UP.forEach((u,i)=>{const c=u.c(S[u.k]);h+='<div class="card"><div class="name">'+u.n+'<span class="tag">lv '+S[u.k]+'</span></div><div class="meta">'+u.d+'</div><div class="btns"><button class="act alt" '+(S.cash<c?'disabled':'')+' onclick="buyUp('+i+')">'+money(c)+'</button></div></div>'});
+  UP.forEach((u,i)=>{const lv=u.k==='demand'?Math.round((S.demand-1)*2+1):S[u.k];const c=u.c(lv);h+='<div class="card"><div class="name">'+u.n+'<span class="tag">lv '+lv+'</span></div><div class="meta">'+u.d+'</div><div class="btns"><button class="act alt" '+(S.cash<c?'disabled':'')+' onclick="buyUp('+i+')">'+money(c)+'</button></div></div>'});
   h+='<h3>The dream</h3><div class="card"><div class="name">Become the next ketchup guy</div><div class="meta">Lifetime earnings '+money(S.earned)+' of $1.00M</div><div class="flav">Packets invented: '+novelCount()+' of '+(P.length-4)+'. Hit packets: '+Object.keys(S.hits).length+'.</div></div>';
   h+='<div class="btns"><button class="act" onclick="reset()">Start Over</button></div>';
  }
@@ -193,11 +218,12 @@ let before=S.cash,secAcc=0,earnSec=0;
 function tick(dt){
  let gain=0;
  ownedList().forEach(p=>{const n=(S.lines[p.id]||0)*lineRate()*dt;const c=n*p.cost;if(S.cash>=c){S.cash-=c;gain-=c;S.stock[p.id]=(S.stock[p.id]||0)+n}
-  const cap=(p.tier===0?14:1.5)*dt*(1+S.fame/400);const sold=Math.min(S.stock[p.id]||0,cap);S.stock[p.id]-=sold;const r=sold*p.price;S.cash+=r;gain+=r;S.earned+=r});
+  const cap=(p.tier===0?14:1.5)*dt*demandMult();const sold=Math.min(S.stock[p.id]||0,cap);S.stock[p.id]-=sold;const r=sold*p.price;S.cash+=r;gain+=r;S.earned+=r});
  if(galleryOpen()){cAcc+=custRate()*dt;while(cAcc>=1){cAcc-=1;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1);if(!shelf.length)break;let want=10+Math.floor(Math.random()*31),got=0;
   for(let i=0;i<want;i++){const p=shelf[Math.floor(Math.random()*shelf.length)];if(S.stock[p.id]>=1){S.stock[p.id]-=1;got++}}
   const r=got*S.flat;S.cash+=r;gain+=r;S.earned+=r;S.fame+=got*0.002}}
  const roy=royalty()*dt;S.cash+=roy;gain+=roy;S.earned+=roy;
+ if(S.camp){S.camp.left-=dt;if(S.camp.left<=0){say(S.camp.n+' wrapped up. Demand back to normal.');S.camp=null}}
  if(S.rd){S.rd.left-=dt;if(S.rd.left<=0)finishRD()}
  secAcc+=dt;earnSec+=gain;if(secAcc>=1){lastRate=earnSec/secAcc;secAcc=0;earnSec=0}
  hAcc+=dt;if(hAcc>22){hAcc=0;if(novelCount()>0)say(HEADS[Math.floor(Math.random()*HEADS.length)])}
