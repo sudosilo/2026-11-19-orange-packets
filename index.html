@@ -52,6 +52,16 @@ input[type=range]{width:100%}
 .big{font-size:20px;font-weight:800}
 .pop{position:fixed;inset:0;background:rgba(43,36,32,.35);display:none;align-items:center;justify-content:center;z-index:20;padding:20px}
 .pop .card{max-width:380px;text-align:center}
+#evt{position:fixed;inset:0;background:rgba(255,250,240,.94);z-index:30;display:none}
+#evt .box{position:absolute;left:16px;right:16px;top:150px;background:#fff;border:3px solid var(--red);border-radius:16px;padding:14px;text-align:center}
+#evt .kicker{font-size:12px;font-weight:800;letter-spacing:2px;color:var(--red)}
+#evt .big{margin:6px 0}
+#evt .fx{margin-top:8px;font-weight:700;color:var(--blue)}
+#evtGo{position:absolute;top:18px;right:12px;padding:10px 16px;border:2px solid var(--ink);border-radius:10px;background:#fff;font-weight:800;color:var(--ink)}
+#evtBait{position:absolute;padding:10px 6px;border:none;border-radius:10px;font-weight:700;font-size:13px;color:#fff;background:var(--red);transform:translate(-50%,-50%);width:44%}
+.haha{position:fixed;z-index:40;font-weight:900;color:var(--red);pointer-events:none;transform:translate(-50%,-50%);animation:up 1.4s ease-out forwards;text-align:center;font-size:18px}
+@keyframes up{from{opacity:1;margin-top:0}to{opacity:0;margin-top:-90px}}
+.tag.evt{background:#dde9ff;color:var(--blue)}
 </style>
 </head>
 <body>
@@ -68,6 +78,7 @@ input[type=range]{width:100%}
 </nav>
 <main id="main"></main>
 <div id="ticker"></div>
+<div id="evt"><button id="evtGo">Continue</button><div class="box"><div class="kicker">WORLD NEWS</div><div class="big" id="evtT"></div><div id="evtB"></div><div class="fx" id="evtF"></div></div><button id="evtBait">Squeeze 10</button></div>
 <div class="pop" id="pop"><div class="card"><div class="big" id="popT"></div><p id="popB"></p><button class="act" onclick="document.getElementById('pop').style.display='none'">Back to squeezing</button></div></div>
 <script>
 const P=[
@@ -137,8 +148,20 @@ const CAMPS=[
  {n:'Food Truck Tour',c:8000,t:120,m:5,f:'Free samples squirted at strangers.'},
  {n:'Late Night TV Spot',c:40000,t:150,m:7,f:'But wait, there is more packet.'}
 ];
+const EVENTS=[
+ {n:'Broccoli Blight',b:'A mystery fungus hits every broccoli field on Earth. Growers weep openly.',ids:['pbroc'],cost:3,price:2.2,dem:1},
+ {n:'Mashed Potato Challenge',b:'A viral video app challenge has teens squeezing mashed potato packets into their shoes.',ids:['mash'],cost:1,price:1.5,dem:5},
+ {n:'Olive Import Ban',b:'The president bans imported olives after a disappointing martini.',ids:['olive','pizza'],cost:2,price:1,dem:0.1},
+ {n:'Ship Stuck in Canal',b:'A cargo ship carrying the world supply of soy sauce is wedged sideways in a canal.',ids:['soy'],cost:4,price:2.5,dem:1},
+ {n:'Record Heat Wave',b:'It is 128 degrees. Everyone wants cold wobbly gelatin immediately.',ids:['jcherry','jlime','jblue'],cost:1,price:1.4,dem:4},
+ {n:'Energy Sauce Probe',b:'Lawmakers hold hearings on why fries are vibrating. Sales stall.',ids:['evolt','erush','ethund'],cost:1,price:.8,dem:.2},
+ {n:'National Mustard Day',b:'A holiday nobody asked for. Somehow everyone celebrates.',ids:['mustard'],cost:1,price:1.6,dem:6},
+ {n:'Cheese Cave Flood',b:'The great cheese caves are underwater. Cheese prices go feral.',ids:['cheese','mac'],cost:3,price:2,dem:1},
+ {n:'Pickle Shortage',b:'Cucumbers refuse to pickle this year. Scientists are baffled.',ids:['pickle','spickle'],cost:2.5,price:2.2,dem:1},
+ {n:'Ketchup Recall Panic',b:'A rival ketchup recall sends shoppers running to your ketchup.',ids:['ketchup'],cost:1,price:1.3,dem:4}
+];
 let S;
-function fresh(){const s={cash:5,fame:0,tapLv:1,lineLv:1,mkt:1,flat:.25,owned:{},lines:{},stock:{},hits:{},rd:null,camp:null,demand:1,won:false,earned:0,start:Date.now()};
+function fresh(){const s={cash:5,fame:0,tapLv:1,lineLv:1,mkt:1,flat:.25,owned:{},lines:{},stock:{},hits:{},rd:null,camp:null,events:[],nextEvt:75,demand:1,won:false,earned:0,start:Date.now()};
  STAPLE.forEach(id=>{s.owned[id]=1;s.lines[id]=0;s.stock[id]=0});return s}
 function load(){try{const r=localStorage.getItem('packetbaron1');S=r?Object.assign(fresh(),JSON.parse(r)):fresh()}catch(e){S=fresh()}}
 function save(){try{localStorage.setItem('packetbaron1',JSON.stringify(S))}catch(e){}}
@@ -159,7 +182,7 @@ function custRate(){if(!galleryOpen())return 0;const v=variety();return v*0.25*S
 let tab='factory',log=[],lastRate=0,acc=0,cAcc=0,hAcc=0;
 function say(t){log.unshift(t);log=log.slice(0,4);$('ticker').innerHTML=log.map(x=>'<div>'+x+'</div>').join('')}
 function pop(t,b){$('popT').textContent=t;$('popB').textContent=b;$('pop').style.display='flex'}
-function squeeze(id){const p=byId(id),n=tapAmt(),c=n*p.cost;if(S.cash<c){say('Not enough cash to buy the goop.');return}S.cash-=c;S.stock[id]=(S.stock[id]||0)+n;draw()}
+function squeeze(id){const p=byId(id),n=tapAmt(),c=n*costOf(p);if(S.cash<c){say('Not enough cash to buy the goop.');return}S.cash-=c;S.stock[id]=(S.stock[id]||0)+n;draw()}
 function buyLine(id){const c=lineCost(id);if(S.cash<c)return;S.cash-=c;S.lines[id]=(S.lines[id]||0)+1;say('New '+byId(id).n+' line installed.');draw()}
 function startRD(id){const p=byId(id);if(S.rd||S.cash<p.rd)return;S.cash-=p.rd;S.rd={id,left:p.t,tot:p.t};say('R and D begins on '+p.n+'. Lab coats on.');draw()}
 function finishRD(){const p=byId(S.rd.id);S.owned[p.id]=1;S.lines[p.id]=0;S.stock[p.id]=0;S.rd=null;S.fame+=p.tier*5;
@@ -169,8 +192,21 @@ function finishRD(){const p=byId(S.rd.id);S.owned[p.id]=1;S.lines[p.id]=0;S.stoc
  if(!galleryOpen()&&novelCount()===2)say('One more invention and the Packet Gallery can open.');
  if(galleryOpen()&&novelCount()===3){pop('THE PACKET GALLERY IS OPEN','Customers grab handfuls of whatever they want and pay one flat price per packet. More kinds on the shelf brings more people.');$('galTab').classList.remove('lock')}
  draw()}
+function evFx(id,k){let m=1;(S.events||[]).forEach(e=>{if(e.ids.includes(id))m*=e[k]});return m}
+function costOf(p){return p.cost*evFx(p.id,'cost')}
+function priceOf(p){return p.price*evFx(p.id,'price')}
+function evOn(id){return (S.events||[]).some(e=>e.ids.includes(id))}
+let lastTap={x:innerWidth/2,y:innerHeight/2};
+function fireEvent(){const pool=EVENTS.filter(e=>e.ids.some(id=>S.owned[id])&&!(S.events||[]).some(x=>x.n===e.n));if(!pool.length)return;
+ const e=pool[Math.floor(Math.random()*pool.length)];S.events=S.events||[];S.events.push({n:e.n,ids:e.ids,cost:e.cost,price:e.price,dem:e.dem,left:120});
+ const fx=[];if(e.cost!==1)fx.push('cost x'+e.cost);if(e.price!==1)fx.push('price x'+e.price);if(e.dem!==1)fx.push('demand x'+e.dem);
+ $('evtT').textContent=e.n;$('evtB').textContent=e.b;$('evtF').textContent=e.ids.filter(id=>byId(id)).map(id=>byId(id).n).join(', ')+': '+fx.join(', ')+' for 2 minutes';
+ const bait=$('evtBait');bait.style.left=Math.min(innerWidth-80,Math.max(80,lastTap.x))+'px';bait.style.top=Math.max(300,Math.min(innerHeight-60,lastTap.y))+'px';
+ $('evt').style.display='block';say('WORLD NEWS: '+e.n)}
+function haha(x,y){const d=document.createElement('div');d.className='haha';d.style.left=x+'px';d.style.top=y+'px';d.innerHTML='hahaha<br><small>you clicked the wrong spot lol</small>';document.body.appendChild(d);setTimeout(()=>d.remove(),1500)}
 function campMult(){return S.camp?S.camp.m:1}
 function demandMult(){return (S.demand||1)*campMult()*(1+S.fame/400)}
+function demOf(p){return demandMult()*evFx(p.id,'dem')}
 function runCamp(i){const c=CAMPS[i];if(S.camp||S.cash<c.c)return;S.cash-=c.c;S.camp={n:c.n,m:c.m,left:c.t,tot:c.t};say(c.n+' launched. Demand x'+c.m+'.');draw()}
 const UP=[
  {k:'tapLv',n:'Bigger Squeezer',d:'Doubles packets per squeeze.',c:l=>25*Math.pow(6,l-1)},
@@ -192,7 +228,7 @@ function draw(){
   h+='<div class="card slot"><div class="name">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind. Run campaigns in the Office.</div></div>';
   h+='<h3>Your packets</h3>';
   ownedList().forEach(p=>{const lc=lineCost(p.id);
-   h+='<div class="card"><div class="row">'+pk(p.c)+'<div class="grow"><div class="name">'+p.n+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+'</div><div class="meta">Stock '+num(S.stock[p.id]||0)+' . Lines '+(S.lines[p.id]||0)+' . Cost '+money(p.cost)+' . Wholesale '+money(p.price)+'</div></div></div>'+
+   h+='<div class="card"><div class="row">'+pk(p.c)+'<div class="grow"><div class="name">'+p.n+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+(evOn(p.id)?'<span class="tag evt">NEWS</span>':'')+'</div><div class="meta">Stock '+num(S.stock[p.id]||0)+' . Lines '+(S.lines[p.id]||0)+' . Cost '+money(costOf(p))+' . Wholesale '+money(priceOf(p))+'</div></div></div>'+
    '<div class="btns"><button class="act" data-do="squeeze(\''+p.id+'\')">Squeeze '+tapAmt()+'</button><button class="act alt" '+(S.cash<lc?'disabled':'')+' data-do="buyLine(\''+p.id+'\')">Line '+money(lc)+'</button></div></div>'});
   h+='<div class="flav" style="padding:4px">Wholesale buyers take staples fast and novelties slowly. Margins are thin. That is the whole point.</div>';
  }
@@ -223,17 +259,22 @@ function draw(){
  }
  $('main').innerHTML=h;
 }
-$('main').addEventListener('pointerdown',e=>{const b=e.target.closest('button[data-do]');if(!b||b.disabled)return;e.preventDefault();new Function(b.dataset.do)()});
+$('evtGo').addEventListener('pointerdown',e=>{e.preventDefault();$('evt').style.display='none';draw()});
+$('evtBait').addEventListener('pointerdown',e=>{e.preventDefault();haha(e.clientX,e.clientY)});
+$('evt').addEventListener('pointerdown',e=>{if(e.target.id==='evt'||e.target.closest('.box'))e.preventDefault()});
+$('main').addEventListener('pointerdown',e=>{lastTap={x:e.clientX,y:e.clientY};const b=e.target.closest('button[data-do]');if(!b||b.disabled)return;e.preventDefault();new Function(b.dataset.do)()});
 document.querySelector('nav').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.t==='gallery'&&!galleryOpen()){say('Gallery opens after 3 inventions.');return}tab=b.dataset.t;draw();window.scrollTo(0,0)});
 let before=S.cash,secAcc=0,earnSec=0;
 function tick(dt){
  let gain=0;
- ownedList().forEach(p=>{const n=(S.lines[p.id]||0)*lineRate()*dt;const c=n*p.cost;if(S.cash>=c){S.cash-=c;gain-=c;S.stock[p.id]=(S.stock[p.id]||0)+n}
-  const cap=(p.tier===0?14:1.5)*dt*demandMult();const sold=Math.min(S.stock[p.id]||0,cap);S.stock[p.id]-=sold;const r=sold*p.price;S.cash+=r;gain+=r;S.earned+=r});
+ ownedList().forEach(p=>{const n=(S.lines[p.id]||0)*lineRate()*dt;const c=n*costOf(p);if(S.cash>=c){S.cash-=c;gain-=c;S.stock[p.id]=(S.stock[p.id]||0)+n}
+  const cap=(p.tier===0?14:1.5)*dt*demOf(p);const sold=Math.min(S.stock[p.id]||0,cap);S.stock[p.id]-=sold;const r=sold*priceOf(p);S.cash+=r;gain+=r;S.earned+=r});
  if(galleryOpen()){cAcc+=custRate()*dt;while(cAcc>=1){cAcc-=1;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1);if(!shelf.length)break;let want=10+Math.floor(Math.random()*31),got=0;
   for(let i=0;i<want;i++){const p=shelf[Math.floor(Math.random()*shelf.length)];if(S.stock[p.id]>=1){S.stock[p.id]-=1;got++}}
   const r=got*S.flat;S.cash+=r;gain+=r;S.earned+=r;S.fame+=got*0.002}}
  const roy=royalty()*dt;S.cash+=roy;gain+=roy;S.earned+=roy;
+ S.events=(S.events||[]).filter(e=>{e.left-=dt;if(e.left<=0){say(e.n+' is old news. Market back to normal.');return false}return true});
+ if($('evt').style.display!=='block'){S.nextEvt=(S.nextEvt==null?75:S.nextEvt)-dt;if(S.nextEvt<=0){S.nextEvt=70+Math.random()*80;fireEvent()}}
  if(S.camp){S.camp.left-=dt;if(S.camp.left<=0){say(S.camp.n+' wrapped up. Demand back to normal.');S.camp=null}}
  if(S.rd){S.rd.left-=dt;if(S.rd.left<=0)finishRD()}
  secAcc+=dt;earnSec+=gain;if(secAcc>=1){lastRate=earnSec/secAcc;secAcc=0;earnSec=0}
