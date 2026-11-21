@@ -394,7 +394,8 @@ function finishRD(){const p=byId(S.rd.id);S.owned[p.id]=1;bumpOwned();S.lines[p.
  if(novelCount()===MIXN){pop('THE 50/50 MACHINE IS ONLINE','Spin it to invent a brand new half and half flavor. Each one becomes a new floor in your tower.')}
  if(galleryOpen()&&novelCount()===3){pop('THE PACKET GALLERY IS OPEN','Customers grab handfuls of whatever they want and pay one flat price per packet. More kinds on the shelf brings more people.');$('galTab').classList.remove('lock')}
  draw()}
-function evFx(id,k){let m=1;(S.events||[]).forEach(e=>{if(e.all||e.ids.includes(id))m*=e[k]});return m}
+function evHit(e,id){if(e.all||e.ids.includes(id))return true;const p=byId(id);return !!(p&&p.combo&&(e.ids.includes(p.a)||e.ids.includes(p.b)))}
+function evFx(id,k){let m=1;(S.events||[]).forEach(e=>{if(evHit(e,id))m*=e[k]});return m}
 const STYLES=[{n:'Standard',b:''},{n:'Glitter',b:'Glitter',req:0,cm:2.5,pm:4,col:'#ffd700'},{n:'Foil',b:'Foil',req:25,cm:4,pm:8,col:'#9aa7b0'},{n:'Holographic',b:'Holo',req:50,cm:7,pm:16,col:'#b388ff'},{n:'Movie Promo',b:'Movie',req:100,cm:12,pm:32,col:'#222222'},{n:'Pop Star',b:'Pop Star',req:200,cm:20,pm:64,col:'#ff4fa3'},{n:'Glow in the Dark',b:'Glow',req:400,cm:35,pm:128,col:'#39ff14'}];
 function lvl(id){S.style=S.style||{};if(S.style[id]==null&&S.glit&&S.glit[id])S.style[id]=1;return S.style[id]||0}
 function isGlit(id){return lvl(id)>0}
@@ -407,13 +408,13 @@ function glitter(id){ascend(id)}
 function styleBtn(p){const l=lvl(p.id),nx=l+1;if(nx>=STYLES.length)return '<button class="act ok" disabled>MAX STYLE</button>';const st=STYLES[nx],c=styleCost(p,nx);
  if((S.lines[p.id]||0)<st.req)return '<button class="act ok" disabled>'+st.b+' '+st.req+'L</button>';
  return '<button class="act ok" '+(S.cash<c?'disabled':'')+' data-do="ascend(\''+p.id+'\')">'+st.b+' '+money(c)+'</button>'}
-function evOn(id){return (S.events||[]).some(e=>e.all||e.ids.includes(id))}
+function evOn(id){return (S.events||[]).some(e=>evHit(e,id))}
 let lastTap={x:innerWidth/2,y:innerHeight/2};
-function randTargets(k){const L=ownedList().filter(p=>(S.lines[p.id]||0)>0).sort((a,b)=>pr(b.id).m-pr(a.id).m).slice(0,12);const out=[];while(L.length&&out.length<k)out.push(L.splice(Math.floor(Math.random()*L.length),1)[0].id);return out}
-function fireEvent(){const busy=ownedList().filter(p=>(S.lines[p.id]||0)>0).length;const pool=EVENTS.filter(e=>(e.all||(e.rand?busy>=e.rand:e.ids.some(id=>S.owned[id])))&&!(S.events||[]).some(x=>x.n===e.n));if(!pool.length)return;
+function randTargets(k){const L=ownedList().filter(p=>!p.combo&&((S.lines[p.id]||0)>0||mixesOf(p.id).some(m=>(S.lines[m.id]||0)>0))).sort((a,b)=>pr(b.id).m-pr(a.id).m).slice(0,12);const out=[];while(L.length&&out.length<k)out.push(L.splice(Math.floor(Math.random()*L.length),1)[0].id);return out}
+function fireEvent(){const busy=ownedList().filter(p=>!p.combo&&(S.lines[p.id]||0)>0).length;const pool=EVENTS.filter(e=>(e.all||(e.rand?busy>=e.rand:e.ids.some(id=>S.owned[id])))&&!(S.events||[]).some(x=>x.n===e.n));if(!pool.length)return;
  const e0=pool[Math.floor(Math.random()*pool.length)],ids=e0.rand?randTargets(e0.rand):(e0.ids||[]),e=Object.assign({},e0,{ids,cost:e0.cost||1,price:e0.price||1,dem:e0.dem==null?1:e0.dem});e.b=e.b.replace('{x}',ids.map(i=>byId(i).n).join(' and '));S.events=S.events||[];S.events.push({n:e.n,ids:e.ids,all:!!e.all,cost:e.cost,price:e.price,dem:e.dem,left:120});
  const fx=[];if(e.cost!==1)fx.push('cost x'+e.cost);if(e.price!==1)fx.push('price x'+e.price);if(e.dem!==1)fx.push('demand x'+e.dem);
- $('evtT').textContent=e.n;$('evtB').textContent=e.b;$('evtF').textContent=(e.all?'Every packet':e.ids.filter(id=>byId(id)).map(id=>byId(id).n).join(', '))+': '+fx.join(', ')+' for 2 minutes';
+ $('evtT').textContent=e.n;$('evtB').textContent=e.b;const mx=e.all?0:new Set(e.ids.flatMap(i=>mixesOf(i).map(m=>m.id))).size;$('evtF').textContent=(e.all?'Every packet':e.ids.filter(id=>byId(id)).map(id=>byId(id).n).join(', ')+(mx?' plus '+mx+' 50/50'+(mx>1?'s that contain ':' that contains ')+(e.ids.length>1?'them':'it'):''))+': '+fx.join(', ')+' for 2 minutes';
  const bait=$('evtBait');bait.style.left=Math.min(innerWidth-80,Math.max(80,lastTap.x))+'px';bait.style.top=Math.max(300,Math.min(innerHeight-60,lastTap.y))+'px';
  $('evt').style.display='block';say('WORLD NEWS: '+e.n)}
 function haha(x,y){const d=document.createElement('div');d.className='haha';d.style.left=x+'px';d.style.top=y+'px';d.innerHTML='hahaha<br><small>you clicked the wrong spot lol</small>';document.body.appendChild(d);setTimeout(()=>d.remove(),1500)}
