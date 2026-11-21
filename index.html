@@ -412,7 +412,7 @@ function mkI(id){const v=S.mk&&S.mk[id];return v==null?MKD:v}
 function mkOf(id){return MKS[mkI(id)]}
 const ELT=[3.5,2.6,2.1,1.7,1.4];
 function elasOf(p){return ELT[Math.min(4,p.tier||0)]*(1-0.05*lvl(p.id))}
-function stylePm(p,sm){const lo=sm.cm*1.5,t=p.tier||0,out=(S.lines[p.id]||0)*lineRate(),K=1000*(1+t)*(1+t);return lo+(sm.pm-lo)/(1+out/K)}
+function stylePm(p,sm){const lo=sm.cm*1.5,t=p.tier||0,out=(S.sr&&S.sr[p.id])||0,K=1000*(1+t)*(1+t);return lo+(sm.pm-lo)/(1+out/K)}
 function mkDem(id){return Math.pow(mkOf(id),-elasOf(byId(id)))}
 function mkAdj(id,d){S.mk=S.mk||{};S.mk[id]=Math.max(0,Math.min(MKS.length-1,mkI(id)+d));draw()}
 function mkAll(d){S.mk=S.mk||{};ownedList().forEach(p=>{S.mk[p.id]=Math.max(0,Math.min(MKS.length-1,mkI(p.id)+d))});fSig='';say('All prices set '+(d>0?'up':'down')+' one step.');draw()}
@@ -557,7 +557,7 @@ function tick(dt){
  const OL=ownedList();for(let i=0;i<OL.length;i++){const p=OL[i],id=p.id,ln=S.lines[id]||0,stk=S.stock[id]||0;if(!ln&&stk<=0)continue;
   const l=ST[id]||0,sm=l?STYLES[l]:null,ec=EV?evFx(id,'cost'):1,ep=EV?evFx(id,'price'):1,ed=EV?evFx(id,'dem'):1;
   let st=stk;if(ln&&MD[id]!==2&&!(MD[id]==null&&PS[id])){const n=ln*LRt,c=n*p.cost*ec*(sm?sm.cm:1);if(S.cash>=c){S.cash-=c;gain-=c;st+=n;madeAcc+=n;const A=pa(id);A.m+=n;A.c+=c}}
-  if(st>0&&MD[id]!==1){const mk=MKS[MK[id]==null?MKD:MK[id]],cap=((p.tier===0?14:1.5)*DM+ln*LRt*0.9*DM/dt)*ed*Math.pow(mk,-elasOf(p)),sold=Math.min(st,cap);st-=sold;soldAcc+=sold;const r=sold*p.price*ep*(sm?stylePm(p,sm):1)*mk;pa(id).r+=r;S.cash+=r;gain+=r;S.earned+=r}
+  if(st>0&&MD[id]!==1){const mk=MKS[MK[id]==null?MKD:MK[id]],cap=((p.tier===0?14:1.5)*DM+ln*LRt*0.9*DM/dt)*ed*Math.pow(mk,-elasOf(p)),sold=Math.min(st,cap);st-=sold;soldAcc+=sold;const SR=S.sr||(S.sr={}),ka=Math.min(1,dt/10);SR[id]=(SR[id]||0)*(1-ka)+sold/dt*ka;const r=sold*p.price*ep*(sm?stylePm(p,sm):1)*mk;pa(id).r+=r;S.cash+=r;gain+=r;S.earned+=r}
   S.stock[id]=st}}
  if(galleryOpen()){cAcc+=custRate()*dt;const cust=Math.floor(cAcc);if(cust>=1){cAcc-=cust;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1&&!isHeld(p.id));
   if(shelf.length){let want=cust<=20?Array.from({length:cust},()=>10+Math.floor(Math.random()*31)).reduce((a,b)=>a+b,0):cust*25,got=0;
