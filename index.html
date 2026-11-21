@@ -68,6 +68,9 @@ button.act.hold{background:#e0a400}
 .mrow button.act{flex:0 0 auto;height:36px;max-width:96px;font-size:11px}
 .mrow button.act.mini{flex:0 0 44px}
 .ground canvas{display:block;width:100%;height:60px}
+.prow{display:flex;align-items:center;gap:6px;margin-top:6px;height:34px}
+.prow button.act.mini{flex:0 0 74px;height:34px;font-size:12px}
+.ptxt{flex:1;text-align:center;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #ticker{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:2px solid var(--line);padding:8px 12px;font-size:13px;max-height:96px;overflow:hidden;z-index:6}
 #ticker div{padding:2px 0;color:var(--muted)}
 #ticker div:first-child{color:var(--ink);font-weight:600}
@@ -400,7 +403,14 @@ const STYLES=[{n:'Standard',b:''},{n:'Glitter',b:'Glitter',req:0,cm:2.5,pm:4,col
 function lvl(id){S.style=S.style||{};if(S.style[id]==null&&S.glit&&S.glit[id])S.style[id]=1;return S.style[id]||0}
 function isGlit(id){return lvl(id)>0}
 function costOf(p){const l=lvl(p.id);return p.cost*evFx(p.id,'cost')*(l?STYLES[l].cm:1)}
-function priceOf(p){const l=lvl(p.id);return p.price*evFx(p.id,'price')*(l?STYLES[l].pm:1)}
+const MKS=[.5,.75,1,1.25,1.5,2,2.5,3,4,5,7,10,15,25,50,100],MKD=2,ELAS=1.5;
+function mkI(id){const v=S.mk&&S.mk[id];return v==null?MKD:v}
+function mkOf(id){return MKS[mkI(id)]}
+function mkDem(id){return Math.pow(mkOf(id),-ELAS)}
+function mkAdj(id,d){S.mk=S.mk||{};S.mk[id]=Math.max(0,Math.min(MKS.length-1,mkI(id)+d));draw()}
+function mkAll(d){S.mk=S.mk||{};ownedList().forEach(p=>{S.mk[p.id]=Math.max(0,Math.min(MKS.length-1,mkI(p.id)+d))});fSig='';say('All prices set '+(d>0?'up':'down')+' one step.');draw()}
+function mkTxt(id){const m=mkOf(id);return 'Price x'+(m<1?m.toFixed(2):m)+' . buyers x'+big(mkDem(id),2)}
+function priceOf(p){const l=lvl(p.id);return p.price*evFx(p.id,'price')*(l?STYLES[l].pm:1)*mkOf(p.id)}
 function glitCost(p){return Math.round(30+(p.rd||10)*0.6)}
 function styleCost(p,nx){return glitCost(p)*Math.pow(6,nx-1)}
 function ascend(id){const p=byId(id),nx=lvl(id)+1;if(nx>=STYLES.length)return;const st=STYLES[nx],c=styleCost(p,nx);if((S.lines[id]||0)<st.req||S.cash<c)return;S.cash-=c;S.style[id]=nx;S.fame+=3*nx;say(p.n+' powers up to '+st.n+' Edition!');draw()}
@@ -454,6 +464,7 @@ function fM1(p){return 'Stock '+num(S.stock[p.id]||0)+' . Lines '+num(S.lines[p.
 function fM2(p){return modeTag(p.id)+'Made '+big(pr(p.id).m,1)+'/s . <span style="color:'+(pr(p.id).p<0?'#d8432b':'#2f9e5b')+'">Profit '+(pr(p.id).p<0?'-':'')+money(Math.abs(pr(p.id).p))+'/s</span>'}
 function fLine(p){const lc=lineCost(p.id);return '<button class="act alt" '+(S.cash<lc?'disabled':'')+' data-do="buyLine(\''+p.id+'\')">'+(lineQty(p.id)>1?'+'+num(lineQty(p.id))+' ':'Line ')+money(lc)+'</button>'}
 function fCard(p,f){const k=(f?f+'_':'')+p.id;return '<div class="card'+(f?' nest':'')+'"><div class="row">'+pk(p.c,lvl(p.id),p.e,p.short||p.n)+'<div class="grow"><div class="name" id="n_'+k+'">'+fTags(p)+'</div><div class="meta" id="a_'+k+'">'+fM1(p)+'</div><div class="meta2" id="b_'+k+'">'+fM2(p)+'</div></div></div>'+
+ '<div class="prow"><button class="act mini alt" data-do="mkAdj(\''+p.id+'\',-1)">Price -</button><span class="ptxt" id="m_'+k+'">'+mkTxt(p.id)+'</span><button class="act mini alt" data-do="mkAdj(\''+p.id+'\',1)">Price +</button></div>'+
  '<div class="btns"><button class="act" data-do="squeeze(\''+p.id+'\')">Squeeze '+tapAmt()+'</button><span id="p_'+k+'" style="display:contents">'+fPause(p)+'</span><span id="l_'+k+'" style="display:contents">'+fLine(p)+'</span><span id="g_'+k+'" style="display:contents">'+styleBtn(p)+'</span></div>'+
  (!f&&!p.combo&&mixesOf(p.id).length?'<button class="dd" id="fd_'+p.id+'" data-do="toggleOpen(\''+p.id+'\')">'+ddLabel(p.id)+'</button>':'')+'</div>'}
 let fLim=200;
@@ -467,7 +478,7 @@ function togglePause(id){const m=(modeOf(id)+1)%3;S.mode[id]=m;if(S.paused)delet
 function fPause(p){const m=modeOf(p.id);return '<button class="act mini '+['ok','hold','stop'][m]+'" data-do="togglePause(\''+p.id+'\')">'+MODES[m]+'</button>'}
 function modeTag(id){const m=modeOf(id);return m===2?'<span style="color:#d8432b">STOPPED</span> . ':m===1?'<span style="color:#b07800">HOLDING</span> . ':''}
 function setH(id,v){const e=document.getElementById(id);if(e&&e.innerHTML!==v)e.innerHTML=v}
-function patchFactory(){$('dem').innerHTML='Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'');fEntries().forEach(([p,f])=>{const k=(f?f+'_':'')+p.id;setH('n_'+k,fTags(p));setH('a_'+k,fM1(p));setH('b_'+k,fM2(p));setH('l_'+k,fLine(p));setH('g_'+k,styleBtn(p));setH('p_'+k,fPause(p));if(!f&&!p.combo&&mixesOf(p.id).length)setH('fd_'+p.id,ddLabel(p.id))})}
+function patchFactory(){$('dem').innerHTML='Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'');fEntries().forEach(([p,f])=>{const k=(f?f+'_':'')+p.id;setH('n_'+k,fTags(p));setH('a_'+k,fM1(p));setH('b_'+k,fM2(p));setH('l_'+k,fLine(p));setH('g_'+k,styleBtn(p));setH('p_'+k,fPause(p));setH('m_'+k,mkTxt(p.id));if(!f&&!p.combo&&mixesOf(p.id).length)setH('fd_'+p.id,ddLabel(p.id))})}
 let fSig='';
 function draw(){
  $('cash').textContent=money(S.cash);$('rate').textContent=money(lastRate)+'/s';$('fame').textContent='Fame '+Math.floor(S.fame);$('royal').textContent='Royalties '+money(royalty())+'/s';
@@ -481,7 +492,7 @@ function draw(){
   if(sig===fSig&&$('dem')){patchFactory();drawGraphs();return}
   fSig=sig;
   h+=graphHTML();
-  h+='<div class="card slot"><div class="name" id="dem">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind. Run campaigns in the Office.</div></div>';
+  h+='<div class="card slot"><div class="name" id="dem">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind, before price. Higher prices mean fewer buyers.</div><div class="btns"><button class="act alt" data-do="mkAll(-1)">All prices -</button><button class="act alt" data-do="mkAll(1)">All prices +</button></div></div>';
   h+='<h3>Your packets</h3><div class="sorts">'+[[1,'Buy x1'],[10,'Buy x10'],[100,'Buy x100'],['max','Buy max']].map(([q,l])=>'<button class="'+((S.buyQty||1)===q?'on':'')+'" data-do="setQty('+(q==='max'?"\'max\'":q)+')">'+l+'</button>').join('')+'</div><div class="sorts">'+SORTS.map(([k,l])=>'<button class="'+((S.sort||'old')===k?'on':'')+'" data-do="setSort(\''+k+'\')">'+l+'</button>').join('')+'</div>';
   fEntries().forEach(([p,f])=>{h+=fCard(p,f)});{const left=factoryList().length-fLim;if(left>0)h+='<div class="btns"><button class="act alt" data-do="moreCards()">Show 200 more ('+num(left)+' left)</button></div>'}
   h+='<div class="flav" style="padding:4px">Wholesale buyers take staples fast and novelties slowly. Margins are thin. That is the whole point.</div>';
@@ -535,11 +546,11 @@ document.querySelector('nav').addEventListener('click',e=>{const b=e.target.clos
 let before=S.cash,secAcc=0,earnSec=0;
 function tick(dt){
  let gain=0;
- {const LRt=lineRate()*dt,DM=demandMult()*dt,EV=(S.events||[]).length,MD=S.mode||{},PS=S.paused||{},ST=S.style||{};
+ {const LRt=lineRate()*dt,DM=demandMult()*dt,EV=(S.events||[]).length,MD=S.mode||{},MK=S.mk||{},PS=S.paused||{},ST=S.style||{};
  const OL=ownedList();for(let i=0;i<OL.length;i++){const p=OL[i],id=p.id,ln=S.lines[id]||0,stk=S.stock[id]||0;if(!ln&&stk<=0)continue;
   const l=ST[id]||0,sm=l?STYLES[l]:null,ec=EV?evFx(id,'cost'):1,ep=EV?evFx(id,'price'):1,ed=EV?evFx(id,'dem'):1;
   let st=stk;if(ln&&MD[id]!==2&&!(MD[id]==null&&PS[id])){const n=ln*LRt,c=n*p.cost*ec*(sm?sm.cm:1);if(S.cash>=c){S.cash-=c;gain-=c;st+=n;madeAcc+=n;const A=pa(id);A.m+=n;A.c+=c}}
-  if(st>0&&MD[id]!==1){const cap=(p.tier===0?14:1.5)*DM*ed,sold=Math.min(st,cap);st-=sold;soldAcc+=sold;const r=sold*p.price*ep*(sm?sm.pm:1);pa(id).r+=r;S.cash+=r;gain+=r;S.earned+=r}
+  if(st>0&&MD[id]!==1){const mk=MKS[MK[id]==null?MKD:MK[id]],cap=(p.tier===0?14:1.5)*DM*ed*Math.pow(mk,-ELAS),sold=Math.min(st,cap);st-=sold;soldAcc+=sold;const r=sold*p.price*ep*(sm?sm.pm:1)*mk;pa(id).r+=r;S.cash+=r;gain+=r;S.earned+=r}
   S.stock[id]=st}}
  if(galleryOpen()){cAcc+=custRate()*dt;const cust=Math.floor(cAcc);if(cust>=1){cAcc-=cust;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1&&!isHeld(p.id));
   if(shelf.length){let want=cust<=20?Array.from({length:cust},()=>10+Math.floor(Math.random()*31)).reduce((a,b)=>a+b,0):cust*25,got=0;
