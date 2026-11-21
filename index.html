@@ -382,7 +382,8 @@ function novelCount(){return ownedList().filter(p=>p.tier>0&&!p.combo).length}
 function galleryOpen(){return novelCount()>=3}
 function variety(){return ownedList().filter(p=>(S.stock[p.id]||0)>=1).length}
 function royalty(){let r=0;for(const id in S.hits){r+=S.hits[id]}return r}
-function custRate(){if(!galleryOpen())return 0;const v=variety();return v*0.25*S.mkt*Math.pow(.25/S.flat,1.6)*(1+S.fame/200)}
+function fameMult(){return 1+Math.log10(1+(S.fame||0)/50)*0.75}
+function custRate(){if(!galleryOpen())return 0;const v=variety();return v*0.25*S.mkt*Math.pow(.25/S.flat,1.6)*fameMult()}
 let tab='factory',log=[],lastRate=0,acc=0,cAcc=0,hAcc=0;
 function say(t){log.unshift(t);log=log.slice(0,4);$('ticker').innerHTML=log.map(x=>'<div>'+x+'</div>').join('')}
 function pop(t,b){$('popT').textContent=t;$('popB').textContent=b;$('pop').style.display='flex'}
@@ -429,7 +430,7 @@ function fireEvent(){const busy=ownedList().filter(p=>!p.combo&&(S.lines[p.id]||
  $('evt').style.display='block';say('WORLD NEWS: '+e.n)}
 function haha(x,y){const d=document.createElement('div');d.className='haha';d.style.left=x+'px';d.style.top=y+'px';d.innerHTML='hahaha<br><small>you clicked the wrong spot lol</small>';document.body.appendChild(d);setTimeout(()=>d.remove(),1500)}
 function campMult(){return S.camp?S.camp.m:1}
-function demandMult(){return (S.demand||1)*campMult()*(1+S.fame/400)}
+function demandMult(){return (S.demand||1)*campMult()*fameMult()}
 function demOf(p){return demandMult()*evFx(p.id,'dem')}
 function runCamp(i){const c=CAMPS[i];if(S.camp||S.cash<c.c)return;S.cash-=c.c;S.camp={n:c.n,m:c.m,left:c.t,tot:c.t};say(c.n+' launched. Demand x'+c.m+'.');draw()}
 const UP=[
@@ -554,7 +555,7 @@ function tick(dt){
   S.stock[id]=st}}
  if(galleryOpen()){cAcc+=custRate()*dt;const cust=Math.floor(cAcc);if(cust>=1){cAcc-=cust;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1&&!isHeld(p.id));
   if(shelf.length){let want=cust<=20?Array.from({length:cust},()=>10+Math.floor(Math.random()*31)).reduce((a,b)=>a+b,0):cust*25,got=0;
-   const per=want/shelf.length;shelf.forEach(p=>{const take=Math.min(S.stock[p.id],per);S.stock[p.id]-=take;got+=take;pa(p.id).r+=take*S.flat});
+   const per=want/shelf.length;shelf.forEach(p=>{const take=Math.min(S.stock[p.id],per*mkDem(p.id));S.stock[p.id]-=take;got+=take;pa(p.id).r+=take*S.flat});
    soldAcc+=got;const r=got*S.flat;S.cash+=r;gain+=r;S.earned+=r;S.fame+=got*0.002}}}
  const roy=royalty()*dt;S.cash+=roy;gain+=roy;S.earned+=roy;
  S.events=(S.events||[]).filter(e=>{e.left-=dt;if(e.left<=0){say(e.n+' is old news. Market back to normal.');return false}return true});
