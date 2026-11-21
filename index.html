@@ -368,7 +368,7 @@ function mixOpen(){return novelCount()>=MIXN}
 function comboObj(c){const A=byId(c.a),B=byId(c.b);return {id:c.id,combo:1,a:c.a,b:c.b,n:'Half '+A.n+' Half '+B.n,short:A.n+' + '+B.n,e:A.e+B.e,c:A.c+'|'+B.c,cost:+((A.cost+B.cost)/2).toFixed(4),price:+((A.price+B.price)/2*1.6).toFixed(4),tier:Math.max(A.tier,B.tier,1),f:'Two packets enter. One packet leaves.'}}
 (S.combos||[]).forEach(c=>{if(byId(c.a)&&byId(c.b)&&!byId(c.id))P.push(comboObj(c))});
 function promoOn(k){return !!(S.promo&&S.promo.k===k)}
-function spinCost(){return 250*Math.pow(1.6,S.spins||0)*(promoOn('mix')?.5:1)}
+function spinCost(){return 250*Math.pow((S.spins||0)+1,2.5)*(promoOn('mix')?.5:1)}
 const PROMOS={mix:{n:'50/50 Half Off Sale',b:'Every 50/50 Machine spin costs half price for the next 5 minutes. Spin while it lasts.'},rd:{n:'Lab Overtime',b:'The lab is running double shifts. R and D runs 25 percent faster for the next 5 minutes.'}};
 function promoTick(dt){if(S.promo){S.promo.left-=dt;if(S.promo.left<=0){say(PROMOS[S.promo.k].n+' is over.');S.promo=null;mixSig='';fSig=''}return}S.nextPromo=(S.nextPromo==null?240:S.nextPromo)-dt;if(S.nextPromo<=0){S.nextPromo=600+Math.random()*600;const ks=Object.keys(PROMOS).filter(k=>k!=='mix'||mixOpen()),k=ks[Math.floor(Math.random()*ks.length)];S.promo={k,left:300};mixSig='';pop(PROMOS[k].n,PROMOS[k].b);say(PROMOS[k].n+' started. 5 minutes.')}}
 function promoHTML(k){return promoOn(k)?'<div class="card slot"><div class="name">'+PROMOS[k].n+'<span class="tag hit" id="prl">'+Math.ceil(S.promo.left)+'s left</span></div><div class="meta">'+PROMOS[k].b+'</div></div>':''}
