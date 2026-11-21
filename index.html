@@ -446,13 +446,15 @@ function fM2(p){return (isPaused(p.id)?'<span style="color:#d8432b">STOPPED</spa
 function fLine(p){const lc=lineCost(p.id);return '<button class="act alt" '+(S.cash<lc?'disabled':'')+' data-do="buyLine(\''+p.id+'\')">'+(lineQty(p.id)>1?'+'+num(lineQty(p.id))+' ':'Line ')+money(lc)+'</button>'}
 function fCard(p,f){const k=(f?f+'_':'')+p.id;return '<div class="card'+(f?' nest':'')+'"><div class="row">'+pk(p.c,lvl(p.id),p.e,p.short||p.n)+'<div class="grow"><div class="name" id="n_'+k+'">'+fTags(p)+'</div><div class="meta" id="a_'+k+'">'+fM1(p)+'</div><div class="meta2" id="b_'+k+'">'+fM2(p)+'</div></div></div>'+
  '<div class="btns"><button class="act" data-do="squeeze(\''+p.id+'\')">Squeeze '+tapAmt()+'</button><span id="p_'+k+'" style="display:contents">'+fPause(p)+'</span><span id="l_'+k+'" style="display:contents">'+fLine(p)+'</span><span id="g_'+k+'" style="display:contents">'+styleBtn(p)+'</span></div>'+
- (!f&&mixesOf(p.id).length?'<button class="dd" id="fd_'+p.id+'" data-do="toggleOpen(\''+p.id+'\')">'+ddLabel(p.id)+'</button>':'')+'</div>'}
-function fEntries(){const out=[];factoryList().forEach(p=>{out.push([p,'']);if(openSet.has(p.id))mixesOf(p.id).forEach(m=>out.push([m,p.id]))});return out}
+ (!f&&!p.combo&&mixesOf(p.id).length?'<button class="dd" id="fd_'+p.id+'" data-do="toggleOpen(\''+p.id+'\')">'+ddLabel(p.id)+'</button>':'')+'</div>'}
+let fLim=200;
+function moreCards(){fLim+=200;fSig='';draw()}
+function fEntries(){const out=[];factoryList().slice(0,fLim).forEach(p=>{out.push([p,'']);if(!p.combo&&openSet.has(p.id))mixesOf(p.id).forEach(m=>out.push([m,p.id]))});return out}
 function isPaused(id){return !!(S.paused&&S.paused[id])}
 function togglePause(id){S.paused=S.paused||{};S.paused[id]=!S.paused[id];say(byId(id).n+(S.paused[id]?' lines stopped. No more goop spent.':' lines running again.'));draw()}
 function fPause(p){return '<button class="act mini '+(isPaused(p.id)?'ok':'stop')+'" data-do="togglePause(\''+p.id+'\')">'+(isPaused(p.id)?'Run':'Stop')+'</button>'}
 function setH(id,v){const e=document.getElementById(id);if(e&&e.innerHTML!==v)e.innerHTML=v}
-function patchFactory(){$('dem').innerHTML='Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'');fEntries().forEach(([p,f])=>{const k=(f?f+'_':'')+p.id;setH('n_'+k,fTags(p));setH('a_'+k,fM1(p));setH('b_'+k,fM2(p));setH('l_'+k,fLine(p));setH('g_'+k,styleBtn(p));setH('p_'+k,fPause(p));if(!f&&mixesOf(p.id).length)setH('fd_'+p.id,ddLabel(p.id))})}
+function patchFactory(){$('dem').innerHTML='Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'');fEntries().forEach(([p,f])=>{const k=(f?f+'_':'')+p.id;setH('n_'+k,fTags(p));setH('a_'+k,fM1(p));setH('b_'+k,fM2(p));setH('l_'+k,fLine(p));setH('g_'+k,styleBtn(p));setH('p_'+k,fPause(p));if(!f&&!p.combo&&mixesOf(p.id).length)setH('fd_'+p.id,ddLabel(p.id))})}
 let fSig='';
 function draw(){
  $('cash').textContent=money(S.cash);$('rate').textContent=money(lastRate)+'/s';$('fame').textContent='Fame '+Math.floor(S.fame);$('royal').textContent='Royalties '+money(royalty())+'/s';
@@ -462,13 +464,13 @@ function draw(){
  let h='';
  if(tab==='tower'){const sig=towerFloors().map(p=>p.id+':'+mixesOf(p.id).length+(openSet.has(p.id)?'o':'')+lvl(p.id)).join();if(sig===twSig&&document.querySelector('.tower')){patchTower();drawGraphs();return}twSig=sig;$('main').innerHTML=towerHTML();wireTower();drawGraphs();return}
  if(tab==='factory'){
-  const sig=fEntries().map(([p,f])=>f+p.id+lvl(p.id)+(f?'':mixesOf(p.id).length)).join()+'|'+S.buyQty+'|'+S.sort+'|'+tapAmt();
+  const sig=fEntries().map(([p,f])=>f+p.id+lvl(p.id)+(f||p.combo?'':mixesOf(p.id).length)).join()+'|'+fLim+'|'+S.buyQty+'|'+S.sort+'|'+tapAmt();
   if(sig===fSig&&$('dem')){patchFactory();drawGraphs();return}
   fSig=sig;
   h+=graphHTML();
   h+='<div class="card slot"><div class="name" id="dem">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind. Run campaigns in the Office.</div></div>';
   h+='<h3>Your packets</h3><div class="sorts">'+[[1,'Buy x1'],[10,'Buy x10'],[100,'Buy x100'],['max','Buy max']].map(([q,l])=>'<button class="'+((S.buyQty||1)===q?'on':'')+'" data-do="setQty('+(q==='max'?"\'max\'":q)+')">'+l+'</button>').join('')+'</div><div class="sorts">'+SORTS.map(([k,l])=>'<button class="'+((S.sort||'old')===k?'on':'')+'" data-do="setSort(\''+k+'\')">'+l+'</button>').join('')+'</div>';
-  fEntries().forEach(([p,f])=>{h+=fCard(p,f)});
+  fEntries().forEach(([p,f])=>{h+=fCard(p,f)});{const left=factoryList().length-fLim;if(left>0)h+='<div class="btns"><button class="act alt" data-do="moreCards()">Show 200 more ('+num(left)+' left)</button></div>'}
   h+='<div class="flav" style="padding:4px">Wholesale buyers take staples fast and novelties slowly. Margins are thin. That is the whole point.</div>';
  }
  if(tab==='mix'){
@@ -592,8 +594,8 @@ let hist=[],madeAcc=0,soldAcc=0,gAcc=0,pacc={},prate={},sortOrder=null;
 function pa(id){return pacc[id]||(pacc[id]={m:0,r:0,c:0})}
 function pr(id){return prate[id]||{m:0,p:0}}
 const SORTS=[['new','Newest'],['most','Most made'],['least','Least made'],['prof','Most profit'],['loss','Least profit']];
-function setSort(k){S.sort=k;const L=ownedList().filter(p=>!p.combo);const f={new:(a,b)=>P.indexOf(b)-P.indexOf(a),most:(a,b)=>pr(b.id).m-pr(a.id).m,least:(a,b)=>pr(a.id).m-pr(b.id).m,prof:(a,b)=>pr(b.id).p-pr(a.id).p,loss:(a,b)=>pr(a.id).p-pr(b.id).p}[k];sortOrder=k==='new'?null:L.sort(f).map(p=>p.id);draw()}
-function factoryList(){const L=ownedList().filter(p=>!p.combo);if(!sortOrder)return S.sort==='new'?L.slice().reverse():L;const idx=id=>{const i=sortOrder.indexOf(id);return i<0?-1:i};return L.slice().sort((a,b)=>idx(a.id)-idx(b.id))}
+function setSort(k){S.sort=k;fLim=200;const L=ownedList().slice();const f={new:(a,b)=>P.indexOf(b)-P.indexOf(a),most:(a,b)=>pr(b.id).m-pr(a.id).m,least:(a,b)=>pr(a.id).m-pr(b.id).m,prof:(a,b)=>pr(b.id).p-pr(a.id).p,loss:(a,b)=>pr(a.id).p-pr(b.id).p}[k];sortOrder=k==='new'?null:L.sort(f).map(p=>p.id);draw()}
+function factoryList(){const L=ownedList();if(!sortOrder)return S.sort==='new'?L.slice().reverse():L;const idx=id=>{const i=sortOrder.indexOf(id);return i<0?-1:i};return L.slice().sort((a,b)=>idx(a.id)-idx(b.id))}
 function graphHTML(){return '<div class="card gcard"><div class="glg"><span><i style="background:#2d6cdf"></i>Made <span class="gm">0</span>/s</span><span><i style="background:#2f9e5b"></i>Sold <span class="gs">0</span>/s</span><span class="gp" style="color:#7a6e66"></span></div><canvas class="gr"></canvas></div>'}
 function drawGraphs(){document.querySelectorAll('canvas.gr').forEach(c=>{const W=c.clientWidth,H=96,d=window.devicePixelRatio||1;if(!W)return;
  if(c.width!==Math.round(W*d)){c.width=Math.round(W*d);c.height=Math.round(H*d)}const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,W,H);
