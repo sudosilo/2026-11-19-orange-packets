@@ -554,7 +554,7 @@ function mrow(m,fid){const o=otherHalf(m,fid),k=fid+'_'+m.id;return '<div class=
  '<span id="tp_'+k+'" style="display:contents">'+fPause(m)+'</span><span id="tl_'+k+'" style="display:contents">'+fLine(m)+'</span></div>'}
 function mrowMeta(m){return (isPaused(m.id)?'<span style="color:#d8432b">STOPPED</span> . ':'')+'Lines '+num(S.lines[m.id]||0)+' . Stock '+num(S.stock[m.id]||0)+' . <span style="color:'+(pr(m.id).p<0?'#d8432b':'#2f9e5b')+'">'+(pr(m.id).p<0?'-':'')+money(Math.abs(pr(m.id).p))+'/s</span>'}
 function ddLabel(id){const ms=mixesOf(id),pf=mixProfit(id);return (openSet.has(id)?'▾ ':'▸ ')+ms.length+(ms.length===1?' mix':' mixes')+' . <span style="color:'+(pf<0?'#d8432b':'#2f9e5b')+'">'+(pf<0?'-':'')+money(Math.abs(pf))+'/s</span>'}
-function towerHTML(){const fl=towerFloors().slice().reverse();let h='<div class="twhint">Tap a floor to squeeze. Tap a mixes bar to open its 50/50s.</div><div class="tower"><div class="roof"><span>PACKET BARON TOWER</span></div>';
+function towerHTML(){const fl=towerFloors().slice().reverse();let h='<div class="twhint">Tap a floor to squeeze. Floor length shows lines compared to your biggest floor.</div><div class="tower"><div class="roof"><span>PACKET BARON TOWER</span></div>';
  fl.forEach(p=>{const ms=mixesOf(p.id).length;h+='<div class="fl"><canvas class="flc" data-id="'+p.id+'"></canvas>';
   if(ms){h+='<button class="dd" id="dd_'+p.id+'" data-do="toggleOpen(\''+p.id+'\')">'+ddLabel(p.id)+'</button>';if(openSet.has(p.id))h+='<div class="ddl">'+mixesOf(p.id).map(m=>mrow(m,p.id)).join('')+'</div>'}
   h+='</div>'});
@@ -568,12 +568,12 @@ function drawFloor(c,sec){const p=byId(c.dataset.id);if(!p)return;const [x,W]=fi
   zig(x,bx+4,y+5,34,30,p.c);x.fillStyle=lightC(p.c)?'#2b2420':'#fff';x.font='900 5.5px system-ui';x.textAlign='center';x.textBaseline='middle';x.fillText('PACKET',bx+21,y+13);
   x.font='13px system-ui';x.fillText(p.e||'',bx+21,y+24);
   x.fillStyle='#2b2420';x.font='700 10px system-ui';x.textAlign='left';const nm=p.n.length>13?p.n.slice(0,12)+'.':p.n;x.fillText(nm,bx+4,y+46);
-  const rx=bx+LABW,rw=bw-LABW-6,built=Math.max(.14,Math.min(1,lines/FULL))*rw;
+  const rx=bx+LABW,rw=bw-LABW-6,built=Math.max(.14,Math.min(1,lines/TMAX))*rw;
   x.setLineDash([4,4]);x.strokeStyle='#cbbfa9';x.lineWidth=1;x.strokeRect(rx,y+6,rw,FH-12);x.setLineDash([]);
   x.fillStyle='#ffffff';x.fillRect(rx,y+6,built,FH-12);x.strokeStyle='#bfae92';x.strokeRect(rx,y+6,built,FH-12);
   const cy=y+FH-15;x.fillStyle='#6b6258';x.fillRect(rx+2,cy,built-4,4);
   for(let k=0;k<built-4;k+=10){x.fillStyle='#9a9087';x.fillRect(rx+2+((k+sec*30)%(built-4)),cy+1,2,2)}
-  const nm2=Math.min(lines,FULL);if(nm2===0){x.font='16px system-ui';x.textAlign='center';x.fillText('✋',rx+built/2,y+24)}
+  const nm2=lines?Math.max(1,Math.min(lines,Math.floor(built/(rw/FULL)))):0;if(nm2===0){x.font='16px system-ui';x.textAlign='center';x.fillText('✋',rx+built/2,y+24)}
   for(let m=0;m<nm2;m++){const mx=rx+6+m*(rw/FULL);x.fillStyle=p.c;rr(x,mx,y+10,rw/FULL-8,16,4);x.fill();x.strokeStyle='rgba(0,0,0,.25)';x.stroke();
    x.fillStyle=isPaused(p.id)?'#d8432b':(Math.sin(sec*6+m)>0?'#2f9e5b':'#d8432b');x.beginPath();x.arc(mx+5,y+15,2.5,0,7);x.fill()}
   const n=isPaused(p.id)?0:Math.min(24,lines*2+(S.stock[p.id]>0?1:0)),sp=20+lineRate()*6;
@@ -583,7 +583,8 @@ function drawFloor(c,sec){const p=byId(c.dataset.id);if(!p)return;const [x,W]=fi
 function drawGround(c,sec){const [x,W]=fitC(c,60);x.clearRect(0,0,W,60);x.fillStyle='#e8d8bd';x.fillRect(0,0,W,44);x.fillStyle='#7cb65a';x.fillRect(0,44,W,16);
  const open=galleryOpen();x.fillStyle=open?'#d8432b':'#7a6e66';rr(x,W/2-80,6,160,20,5);x.fill();x.fillStyle='#fff';x.font='800 11px system-ui';x.textAlign='center';x.textBaseline='middle';x.fillText(open?'PACKET GALLERY':'LOADING DOCK',W/2,16);
  x.fillStyle='#8fc1ec';x.fillRect(W/2-16,28,32,16);if(open){const cr=Math.min(6,Math.ceil(custRate()));for(let k=0;k<cr;k++){x.font='13px system-ui';x.fillText('🧍',(sec*40+k*70)%W,36)}}}
-function drawTower(t){const sec=t/1000;visFl.forEach(c=>{if(!c.isConnected)return;c.id==='gnd'?drawGround(c,sec):drawFloor(c,sec)})}
+let TMAX=1;
+function drawTower(t){const sec=t/1000;TMAX=Math.max(1,...towerFloors().map(p=>S.lines[p.id]||0));visFl.forEach(c=>{if(!c.isConnected)return;c.id==='gnd'?drawGround(c,sec):drawFloor(c,sec)})}
 
 let hist=[],madeAcc=0,soldAcc=0,gAcc=0,pacc={},prate={},sortOrder=null;
 function pa(id){return pacc[id]||(pacc[id]={m:0,r:0,c:0})}
