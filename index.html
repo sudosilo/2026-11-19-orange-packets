@@ -23,7 +23,7 @@ nav button.lock{opacity:.4}
 main{padding:6px 10px 120px}
 .card{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:10px 12px;margin:8px 0}
 .row{display:flex;align-items:center;gap:10px}
-.pk{width:44px;height:34px;border-radius:6px;flex:none;position:relative;box-shadow:inset 0 -6px 0 rgba(0,0,0,.12);border:2px solid rgba(0,0,0,.15)}
+.pk{width:46px;height:36px;border-radius:9px 9px 12px 12px;flex:none;position:relative;box-shadow:inset 0 -7px 0 rgba(0,0,0,.14),inset 0 5px 0 rgba(255,255,255,.35);border:2px solid rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;overflow:hidden}
 .pk:after{content:"";position:absolute;top:3px;left:4px;right:4px;height:3px;border-top:2px dashed rgba(255,255,255,.7)}
 .name{font-weight:700}
 .meta{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:16px}
@@ -46,7 +46,9 @@ h3{margin:14px 4px 4px;font-size:14px;color:var(--muted);text-transform:uppercas
 #ticker div{padding:2px 0;color:var(--muted)}
 #ticker div:first-child{color:var(--ink);font-weight:600}
 .shelf{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.shelf .pk{width:34px;height:26px}
+.shelf .pk{width:36px;height:28px;font-size:14px}
+.fly{position:fixed;z-index:25;pointer-events:none;width:30px;height:23px;font-size:12px;animation:fly .9s ease-out forwards}
+@keyframes fly{from{opacity:1;transform:translate(-50%,-50%) rotate(0)}to{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% - var(--dy))) rotate(var(--r))}}
 .bin{text-align:center;font-size:10px;color:var(--muted);width:52px}
 input[type=range]{width:100%}
 .big{font-size:20px;font-weight:800}
@@ -85,59 +87,71 @@ input[type=range]{width:100%}
 <div class="pop" id="pop"><div class="card"><div class="big" id="popT"></div><p id="popB"></p><button class="act" onclick="document.getElementById('pop').style.display='none'">Back to squeezing</button></div></div>
 <script>
 const P=[
- {id:'ketchup',n:'Ketchup',c:'#d8432b',cost:.02,price:.035,tier:0,f:'The packet that made somebody else rich.'},
- {id:'mustard',n:'Mustard',c:'#f2b705',cost:.02,price:.035,tier:0,f:'Yellow. Reliable. Boring.'},
- {id:'mayo',n:'Mayonnaise',c:'#f4ecd2',cost:.025,price:.04,tier:0,f:'Nobody has ever been excited about this packet.'},
- {id:'soy',n:'Soy Sauce',c:'#4a2a1a',cost:.015,price:.03,tier:0,f:'Comes free with everything. That is the problem.'},
- {id:'pepper',n:'Dry Pepper Flakes',c:'#b8331f',cost:.03,price:.06,tier:1,rd:40,t:12,f:'Reasonable. Almost sensible.'},
- {id:'olive',n:'Diced Olives',c:'#3d4a2a',cost:.04,price:.08,tier:1,rd:80,t:15,f:'Slightly wet. Mostly olive.'},
- {id:'pizza',n:'Pizza in a Pouch',c:'#e8873a',cost:.08,price:.18,tier:2,rd:250,t:25,req:['pepper','olive'],f:'Peppers, olives, sauce, cheese, regret. Marketed exactly as named.'},
- {id:'pudding',n:'Banana Pudding',c:'#f5dc7a',cost:.07,price:.15,tier:2,rd:400,t:25,f:'Squeeze directly into mouth. Wafer sold separately.'},
- {id:'punch',n:'Fruit Punch Premix',c:'#e0245e',cost:.05,price:.12,tier:2,rd:600,t:30,f:'Just add a gallon of water and a pitcher you do not have.'},
- {id:'jcherry',n:'Cherry Gelatin',c:'#c8102e',cost:.05,price:.13,tier:2,rd:800,t:30,f:'Wobbles in the packet. Wobbles in the mouth.'},
- {id:'jlime',n:'Lime Gelatin',c:'#5fbf3a',cost:.05,price:.13,tier:2,rd:950,t:30,f:'Hospital tray energy, now portable.'},
- {id:'jblue',n:'Blue Raspberry Gelatin',c:'#2b8ce6',cost:.05,price:.14,tier:2,rd:1100,t:30,f:'No raspberry has ever been this blue.'},
- {id:'sugar',n:'Regular Sweetener',c:'#ffffff',cost:.01,price:.04,tier:2,rd:1300,t:20,f:'Sugar. In a packet. Finally, something normal.'},
- {id:'artsw',n:'Artificial Sweetener',c:'#f7a8c8',cost:.01,price:.05,tier:2,rd:1500,t:20,f:'Tastes sweet, then tastes like a lab.'},
- {id:'lowsw',n:'Super Low Calorie Sweetener',c:'#ffe066',cost:.012,price:.06,tier:2,rd:1700,t:20,f:'Negative calories, according to the label.'},
- {id:'grape',n:'Grape Drink Premix',c:'#6a2c91',cost:.05,price:.12,tier:2,rd:1900,t:25,f:'Purple tongue guaranteed.'},
- {id:'lemon',n:'Lemonade Premix',c:'#fff176',cost:.05,price:.12,tier:2,rd:2100,t:25,f:'When life gives you lemons, packet them.'},
- {id:'gravy',n:'Gravy',c:'#8a5a2b',cost:.06,price:.14,tier:3,rd:1200,t:35,f:'Arrives warm somehow. Do not ask.'},
- {id:'milk',n:'Whole Milk',c:'#fbfbf7',cost:.09,price:.22,tier:3,rd:2500,t:40,f:'Expires before you leave the store.'},
- {id:'soda',n:'Carbonated Soda',c:'#6b3a1f',cost:.1,price:.26,tier:3,rd:4000,t:45,f:'Pressurized. Legally a firework in two counties.'},
- {id:'gcola',n:'Cola Soda Gel',c:'#4a1f0e',cost:.08,price:.24,tier:3,rd:5000,t:45,f:'Soda syrup, but it holds its shape. Special.'},
- {id:'glime',n:'Lemon Lime Soda Gel',c:'#c9e85a',cost:.08,price:.24,tier:3,rd:5800,t:45,f:'Basically syrup. Do not tell anyone.'},
- {id:'groot',n:'Root Beer Soda Gel',c:'#6e3b1c',cost:.08,price:.25,tier:3,rd:6600,t:45,f:'Float not included. Foam not possible.'},
- {id:'evolt',n:'Volt Berry Energy Sauce',c:'#d01fd8',cost:.1,price:.3,tier:4,rd:9000,t:50,f:'Goes on fries. Your heart notices.'},
- {id:'erush',n:'Blue Rush Energy Sauce',c:'#1fb6ff',cost:.1,price:.3,tier:4,rd:10500,t:50,f:'Tastes like a gas station at 3am.'},
- {id:'ethund',n:'Tropical Thunder Energy Sauce',c:'#ffb000',cost:.1,price:.31,tier:4,rd:12000,t:50,f:'Mango, pineapple, and a faint hum.'},
- {id:'soup',n:'Tomato Soup',c:'#c9302c',cost:.12,price:.3,tier:4,rd:8000,t:50,f:'Tomato. Opens like a geyser.'},
- {id:'egg',n:'Scrambled Egg',c:'#ffd84a',cost:.11,price:.28,tier:4,rd:12000,t:55,f:'One egg. Pre scrambled. Pre regretted.'},
- {id:'begg',n:'Blended Boiled Egg',c:'#f3e9c6',cost:.11,price:.3,tier:4,rd:13500,t:55,f:'The whole egg, smoothied. Shell sold separately.'},
- {id:'ehc',n:'Egg Ham and Cheese',c:'#f2a65a',cost:.16,price:.4,tier:4,rd:15500,t:60,f:'A breakfast sandwich minus the sandwich.'},
- {id:'spag',n:'Spaghetti',c:'#f0c76b',cost:.14,price:.34,tier:4,rd:18000,t:60,f:'Single noodle, very long, coiled.'},
- {id:'mash',n:'Mashed Potato',c:'#efe3c0',cost:.12,price:.3,tier:5,rd:30000,t:65,f:'Pairs with the Gravy packet. Synergy.'},
- {id:'pbroc',n:'Pureed Broccoli',c:'#4f8a2b',cost:.07,price:.22,tier:5,rd:34000,t:65,f:'All the trees, none of the crunch.'},
- {id:'pegg',n:'Pureed Eggplant',c:'#5b2a5e',cost:.08,price:.24,tier:5,rd:38000,t:65,f:'Purple paste with a purpose.'},
- {id:'psaus',n:'Pureed Sausage',c:'#b5653a',cost:.12,price:.34,tier:5,rd:42000,t:70,f:'Breakfast, smoothed out. Deeply wrong.'},
- {id:'pfruit',n:'Pureed Mixed Fruit',c:'#f06a8a',cost:.06,price:.2,tier:5,rd:46000,t:65,f:'Every fruit, one color, no regrets.'},
- {id:'pickle',n:'Pickle Juice',c:'#9fc23a',cost:.05,price:.2,tier:5,rd:45000,t:70,f:'For athletes, cramps, and the curious.'},
- {id:'spickle',n:'Spicy Pickle Juice',c:'#c8c21a',cost:.06,price:.24,tier:5,rd:55000,t:70,f:'Pickle juice that fights back.'},
- {id:'cheese',n:'Melted Cheese',c:'#ffb81c',cost:.15,price:.38,tier:5,rd:70000,t:75,f:'Stays melted forever. Science cannot explain it.'},
- {id:'mac',n:'Macaroni and Cheese',c:'#f7b733',cost:.14,price:.36,tier:5,rd:85000,t:75,f:'Noodles first, cheese second, fork never.'},
- {id:'oat',n:'Oatmeal',c:'#d8c39a',cost:.1,price:.3,tier:6,rd:110000,t:80,f:'Lumpy by design.'},
- {id:'brew',n:'Cold Brew',c:'#3b2416',cost:.18,price:.45,tier:6,rd:160000,t:85,f:'Eleven sips of pure jitters.'},
- {id:'chai',n:'Blended Chai',c:'#c58b5a',cost:.12,price:.36,tier:6,rd:180000,t:85,f:'Cardamom, cinnamon, and a tiny cozy sweater.'},
- {id:'espr',n:'Single Shot Espresso',c:'#2a170c',cost:.15,price:.5,tier:6,rd:200000,t:85,f:'Tear, squeeze, vibrate.'},
- {id:'vanil',n:'Vanilla Bean Smoothie',c:'#f6ecd8',cost:.14,price:.42,tier:6,rd:220000,t:85,f:'Real flecks. Fake straw.'},
- {id:'feast',n:'Holiday Dinner',c:'#a8642e',cost:.3,price:.8,tier:7,rd:250000,t:90,f:'Turkey, stuffing, cranberry, layered like strata.'},
- {id:'ice',n:'Ice Cube, Former',c:'#cfeefe',cost:.02,price:.25,tier:7,rd:350000,t:95,f:'It was ice at the factory. Promise.'},
- {id:'rain',n:'Rain',c:'#8fb8de',cost:.01,price:.3,tier:8,rd:500000,t:100,f:'Harvested from a single cloud in Ohio.'},
- {id:'fog',n:'Fog',c:'#e6e9ec',cost:.01,price:.35,tier:8,rd:700000,t:105,f:'Packet appears empty. It is not empty. It is fog.'},
- {id:'sand',n:'Wet Sand',c:'#d9b77a',cost:.01,price:.3,tier:8,rd:900000,t:110,f:'A beach day, minus everything good.'},
- {id:'ocean',n:'The Ocean (Sample)',c:'#1f6fb2',cost:.02,price:.5,tier:9,rd:1300000,t:120,f:'Contains trace amounts of whale opinion.'},
- {id:'air',n:'Premium Air',c:'#f4fbff',cost:.001,price:.6,tier:9,rd:1800000,t:130,f:'Hand squeezed mountain air. Puffy.'},
- {id:'meta',n:'A Packet of Packets',c:'#ff7a45',cost:.5,price:1.4,tier:10,rd:3000000,t:150,f:'Inside: twelve smaller ketchup packets. Full circle.'}
+ {id:'ketchup',e:'🍅',n:'Ketchup',c:'#d8432b',cost:.02,price:.035,tier:0,f:'The packet that made somebody else rich.'},
+ {id:'mustard',e:'🌭',n:'Mustard',c:'#f2b705',cost:.02,price:.035,tier:0,f:'Yellow. Reliable. Boring.'},
+ {id:'mayo',e:'🫙',n:'Mayonnaise',c:'#f4ecd2',cost:.025,price:.04,tier:0,f:'Nobody has ever been excited about this packet.'},
+ {id:'soy',e:'🥢',n:'Soy Sauce',c:'#4a2a1a',cost:.015,price:.03,tier:0,f:'Comes free with everything. That is the problem.'},
+ {id:'pepper',e:'🌶️',n:'Dry Pepper Flakes',c:'#b8331f',cost:.03,price:.06,tier:1,rd:40,t:12,f:'Reasonable. Almost sensible.'},
+ {id:'olive',e:'🫒',n:'Diced Olives',c:'#3d4a2a',cost:.04,price:.08,tier:1,rd:80,t:15,f:'Slightly wet. Mostly olive.'},
+ {id:'creamer',e:'🐄',n:'Coffee Creamer',c:'#f5e6c8',cost:.015,price:.05,tier:1,rd:120,t:15,f:'The packet nobody counts but everybody takes nine of.'},
+ {id:'pizza',e:'🍕',n:'Pizza in a Pouch',c:'#e8873a',cost:.08,price:.18,tier:2,rd:250,t:25,req:['pepper','olive'],f:'Peppers, olives, sauce, cheese, regret. Marketed exactly as named.'},
+ {id:'pudding',e:'🍌',n:'Banana Pudding',c:'#f5dc7a',cost:.07,price:.15,tier:2,rd:400,t:25,f:'Squeeze directly into mouth. Wafer sold separately.'},
+ {id:'punch',e:'🍹',n:'Fruit Punch Premix',c:'#e0245e',cost:.05,price:.12,tier:2,rd:600,t:30,f:'Just add a gallon of water and a pitcher you do not have.'},
+ {id:'jcherry',e:'🍒',n:'Cherry Gelatin',c:'#c8102e',cost:.05,price:.13,tier:2,rd:800,t:30,f:'Wobbles in the packet. Wobbles in the mouth.'},
+ {id:'jlime',e:'🍏',n:'Lime Gelatin',c:'#5fbf3a',cost:.05,price:.13,tier:2,rd:950,t:30,f:'Hospital tray energy, now portable.'},
+ {id:'jblue',e:'🫐',n:'Blue Raspberry Gelatin',c:'#2b8ce6',cost:.05,price:.14,tier:2,rd:1100,t:30,f:'No raspberry has ever been this blue.'},
+ {id:'sugar',e:'🍰',n:'Regular Sweetener',c:'#ffffff',cost:.01,price:.04,tier:2,rd:1300,t:20,f:'Sugar. In a packet. Finally, something normal.'},
+ {id:'artsw',e:'🧪',n:'Artificial Sweetener',c:'#f7a8c8',cost:.01,price:.05,tier:2,rd:1500,t:20,f:'Tastes sweet, then tastes like a lab.'},
+ {id:'lowsw',e:'🪶',n:'Super Low Calorie Sweetener',c:'#ffe066',cost:.012,price:.06,tier:2,rd:1700,t:20,f:'Negative calories, according to the label.'},
+ {id:'grape',e:'🍇',n:'Grape Drink Premix',c:'#6a2c91',cost:.05,price:.12,tier:2,rd:1900,t:25,f:'Purple tongue guaranteed.'},
+ {id:'lemon',e:'🍋',n:'Lemonade Premix',c:'#fff176',cost:.05,price:.12,tier:2,rd:2100,t:25,f:'When life gives you lemons, packet them.'},
+ {id:'hardc',e:'🍬',n:'Hard Candy',c:'#e63946',cost:.02,price:.07,tier:2,rd:2400,t:25,f:'One crushed hard candy. Crunchy dust of joy.'},
+ {id:'gummy',e:'🧸',n:'Gummy Candy',c:'#ff8fab',cost:.03,price:.08,tier:2,rd:2700,t:25,f:'A single gummy, sad and alone in its pouch.'},
+ {id:'rainb',e:'🌈',n:'Rainbow Candy Bits',c:'#9b5de5',cost:.03,price:.09,tier:2,rd:3000,t:25,f:'Every color, about four pieces total.'},
+ {id:'gravy',e:'🍗',n:'Gravy',c:'#8a5a2b',cost:.06,price:.14,tier:3,rd:1200,t:35,f:'Arrives warm somehow. Do not ask.'},
+ {id:'milk',e:'🥛',n:'Whole Milk',c:'#fbfbf7',cost:.09,price:.22,tier:3,rd:2500,t:40,f:'Expires before you leave the store.'},
+ {id:'soda',e:'🥤',n:'Carbonated Soda',c:'#6b3a1f',cost:.1,price:.26,tier:3,rd:4000,t:45,f:'Pressurized. Legally a firework in two counties.'},
+ {id:'gcola',e:'🥤',n:'Cola Soda Gel',c:'#4a1f0e',cost:.08,price:.24,tier:3,rd:5000,t:45,f:'Soda syrup, but it holds its shape. Special.'},
+ {id:'glime',e:'🍋',n:'Lemon Lime Soda Gel',c:'#c9e85a',cost:.08,price:.24,tier:3,rd:5800,t:45,f:'Basically syrup. Do not tell anyone.'},
+ {id:'groot',e:'🍺',n:'Root Beer Soda Gel',c:'#6e3b1c',cost:.08,price:.25,tier:3,rd:6600,t:45,f:'Float not included. Foam not possible.'},
+ {id:'caramel',e:'🍮',n:'Caramel',c:'#c68642',cost:.06,price:.18,tier:3,rd:7200,t:45,f:'Sticky enough to seal the packet shut forever.'},
+ {id:'wchoc',e:'🍫',n:'White Chocolate',c:'#fff5e1',cost:.07,price:.2,tier:3,rd:7800,t:45,f:'Technically not chocolate. Technically a packet.'},
+ {id:'evolt',e:'⚡',n:'Volt Berry Energy Sauce',c:'#d01fd8',cost:.1,price:.3,tier:4,rd:9000,t:50,f:'Goes on fries. Your heart notices.'},
+ {id:'erush',e:'💙',n:'Blue Rush Energy Sauce',c:'#1fb6ff',cost:.1,price:.3,tier:4,rd:10500,t:50,f:'Tastes like a gas station at 3am.'},
+ {id:'ethund',e:'🌩️',n:'Tropical Thunder Energy Sauce',c:'#ffb000',cost:.1,price:.31,tier:4,rd:12000,t:50,f:'Mango, pineapple, and a faint hum.'},
+ {id:'soup',e:'🥣',n:'Tomato Soup',c:'#c9302c',cost:.12,price:.3,tier:4,rd:8000,t:50,f:'Tomato. Opens like a geyser.'},
+ {id:'egg',e:'🍳',n:'Scrambled Egg',c:'#ffd84a',cost:.11,price:.28,tier:4,rd:12000,t:55,f:'One egg. Pre scrambled. Pre regretted.'},
+ {id:'begg',e:'🥚',n:'Blended Boiled Egg',c:'#f3e9c6',cost:.11,price:.3,tier:4,rd:13500,t:55,f:'The whole egg, smoothied. Shell sold separately.'},
+ {id:'ehc',e:'🥪',n:'Egg Ham and Cheese',c:'#f2a65a',cost:.16,price:.4,tier:4,rd:15500,t:60,f:'A breakfast sandwich minus the sandwich.'},
+ {id:'spag',e:'🍝',n:'Spaghetti',c:'#f0c76b',cost:.14,price:.34,tier:4,rd:18000,t:60,f:'Single noodle, very long, coiled.'},
+ {id:'mash',e:'🥔',n:'Mashed Potato',c:'#efe3c0',cost:.12,price:.3,tier:5,rd:30000,t:65,f:'Pairs with the Gravy packet. Synergy.'},
+ {id:'pbroc',e:'🥦',n:'Pureed Broccoli',c:'#4f8a2b',cost:.07,price:.22,tier:5,rd:34000,t:65,f:'All the trees, none of the crunch.'},
+ {id:'pegg',e:'🍆',n:'Pureed Eggplant',c:'#5b2a5e',cost:.08,price:.24,tier:5,rd:38000,t:65,f:'Purple paste with a purpose.'},
+ {id:'psaus',e:'🌭',n:'Pureed Sausage',c:'#b5653a',cost:.12,price:.34,tier:5,rd:42000,t:70,f:'Breakfast, smoothed out. Deeply wrong.'},
+ {id:'pfruit',e:'🍓',n:'Pureed Mixed Fruit',c:'#f06a8a',cost:.06,price:.2,tier:5,rd:46000,t:65,f:'Every fruit, one color, no regrets.'},
+ {id:'pickle',e:'🥒',n:'Pickle Juice',c:'#9fc23a',cost:.05,price:.2,tier:5,rd:45000,t:70,f:'For athletes, cramps, and the curious.'},
+ {id:'spickle',e:'🔥',n:'Spicy Pickle Juice',c:'#c8c21a',cost:.06,price:.24,tier:5,rd:55000,t:70,f:'Pickle juice that fights back.'},
+ {id:'cheese',e:'🧀',n:'Melted Cheese',c:'#ffb81c',cost:.15,price:.38,tier:5,rd:70000,t:75,f:'Stays melted forever. Science cannot explain it.'},
+ {id:'mac',e:'🍲',n:'Macaroni and Cheese',c:'#f7b733',cost:.14,price:.36,tier:5,rd:85000,t:75,f:'Noodles first, cheese second, fork never.'},
+ {id:'oat',e:'🥣',n:'Oatmeal',c:'#d8c39a',cost:.1,price:.3,tier:6,rd:110000,t:80,f:'Lumpy by design.'},
+ {id:'brew',e:'☕',n:'Cold Brew',c:'#3b2416',cost:.18,price:.45,tier:6,rd:160000,t:85,f:'Eleven sips of pure jitters.'},
+ {id:'chai',e:'🫖',n:'Blended Chai',c:'#c58b5a',cost:.12,price:.36,tier:6,rd:180000,t:85,f:'Cardamom, cinnamon, and a tiny cozy sweater.'},
+ {id:'espr',e:'☕',n:'Single Shot Espresso',c:'#2a170c',cost:.15,price:.5,tier:6,rd:200000,t:85,f:'Tear, squeeze, vibrate.'},
+ {id:'vanil',e:'🍦',n:'Vanilla Bean Smoothie',c:'#f6ecd8',cost:.14,price:.42,tier:6,rd:220000,t:85,f:'Real flecks. Fake straw.'},
+ {id:'mwash',e:'🦷',n:'Mouthwash',c:'#2ec4b6',cost:.04,price:.25,tier:6,rd:240000,t:85,f:'Swish, spit, regret the size.'},
+ {id:'tpaste',e:'🪥',n:'Flavored Edible Toothpaste',c:'#a0e7e5',cost:.05,price:.28,tier:6,rd:260000,t:85,f:'Bubblegum flavor. Do not swallow. Wait, swallow.'},
+ {id:'menthe',e:'🌿',n:'Creme de Menthe',c:'#3ddc84',cost:.09,price:.38,tier:6,rd:280000,t:85,f:'A mint dessert sauce with fancy ideas.'},
+ {id:'feast',e:'🦃',n:'Holiday Dinner',c:'#a8642e',cost:.3,price:.8,tier:7,rd:250000,t:90,f:'Turkey, stuffing, cranberry, layered like strata.'},
+ {id:'ice',e:'🧊',n:'Ice Cube, Former',c:'#cfeefe',cost:.02,price:.25,tier:7,rd:350000,t:95,f:'It was ice at the factory. Promise.'},
+ {id:'rain',e:'🌧️',n:'Rain',c:'#8fb8de',cost:.01,price:.3,tier:8,rd:500000,t:100,f:'Harvested from a single cloud in Ohio.'},
+ {id:'fog',e:'🌫️',n:'Fog',c:'#e6e9ec',cost:.01,price:.35,tier:8,rd:700000,t:105,f:'Packet appears empty. It is not empty. It is fog.'},
+ {id:'sand',e:'🏖️',n:'Wet Sand',c:'#d9b77a',cost:.01,price:.3,tier:8,rd:900000,t:110,f:'A beach day, minus everything good.'},
+ {id:'holy',e:'😇',n:'Holy Water',c:'#e8f4ff',cost:.005,price:.55,tier:8,rd:1000000,t:110,f:'Blessed in bulk. Thirty packets per prayer.'},
+ {id:'gamer',e:'🎮',n:'Gamer Girl Bath Water',c:'#ff9de2',cost:.005,price:.6,tier:8,rd:1100000,t:115,f:'Sold out in nine seconds. Restocked in ten.'},
+ {id:'dogw',e:'🐶',n:'Certified Dog Water',c:'#9db4c0',cost:.002,price:.5,tier:8,rd:1200000,t:115,f:'Officially certified. Tastes like losing.'},
+ {id:'ocean',e:'🌊',n:'The Ocean (Sample)',c:'#1f6fb2',cost:.02,price:.5,tier:9,rd:1300000,t:120,f:'Contains trace amounts of whale opinion.'},
+ {id:'air',e:'💨',n:'Premium Air',c:'#f4fbff',cost:.001,price:.6,tier:9,rd:1800000,t:130,f:'Hand squeezed mountain air. Puffy.'},
+ {id:'meta',e:'📦',n:'A Packet of Packets',c:'#ff7a45',cost:.5,price:1.4,tier:10,rd:3000000,t:150,f:'Inside: twelve smaller ketchup packets. Full circle.'}
 ];
 const STAPLE=P.filter(p=>p.tier===0).map(p=>p.id);
 const HEADS=[
@@ -195,7 +209,7 @@ function custRate(){if(!galleryOpen())return 0;const v=variety();return v*0.25*S
 let tab='factory',log=[],lastRate=0,acc=0,cAcc=0,hAcc=0;
 function say(t){log.unshift(t);log=log.slice(0,4);$('ticker').innerHTML=log.map(x=>'<div>'+x+'</div>').join('')}
 function pop(t,b){$('popT').textContent=t;$('popB').textContent=b;$('pop').style.display='flex'}
-function squeeze(id){const p=byId(id),n=tapAmt(),c=n*costOf(p);if(S.cash<c){say('Not enough cash to buy the goop.');return}S.cash-=c;S.stock[id]=(S.stock[id]||0)+n;draw()}
+function squeeze(id){const p=byId(id),n=tapAmt(),c=n*costOf(p);if(S.cash<c){say('Not enough cash to buy the goop.');return}S.cash-=c;S.stock[id]=(S.stock[id]||0)+n;burst(p,n);draw()}
 function buyLine(id){const c=lineCost(id);if(S.cash<c)return;S.cash-=c;S.lines[id]=(S.lines[id]||0)+1;say('New '+byId(id).n+' line installed.');draw()}
 function startRD(id){const p=byId(id);if(S.rd||S.cash<p.rd)return;S.cash-=p.rd;S.rd={id,left:p.t,tot:p.t};say('R and D begins on '+p.n+'. Lab coats on.');draw()}
 function finishRD(){const p=byId(S.rd.id);S.owned[p.id]=1;S.lines[p.id]=0;S.stock[p.id]=0;S.rd=null;S.fame+=p.tier*5;
@@ -233,7 +247,8 @@ const UP=[
 function buyUp(i){const u=UP[i],lv=u.k==='demand'?Math.round((S.demand-1)*2+1):S[u.k],c=u.c(lv);if(S.cash<c)return;S.cash-=c;if(u.k==='mkt'||u.k==='demand'){S[u.k]=Math.round((S[u.k]+0.5)*10)/10}else S[u.k]+=1;say(u.n+' purchased.');draw()}
 function setFlat(v){S.flat=parseFloat(v);$('flatv').textContent=money(S.flat);$('custv').textContent=custRate().toFixed(2)+' customers per second'}
 function reset(){if(!window.__r){window.__r=1;say('Tap Start Over again to wipe the company.');setTimeout(()=>window.__r=0,3000);return}S=fresh();save();log=[];say('A new packet empire begins.');draw()}
-function pk(c,g){return '<div class="pk'+(g?' glit':'')+'" style="background-color:'+c+'"></div>'}
+function pk(c,g,e){return '<div class="pk'+(g?' glit':'')+'" style="background-color:'+c+'">'+(e||'')+'</div>'}
+function burst(p,n){const k=Math.min(14,4+Math.floor(n/10));for(let i=0;i<k;i++){const d=document.createElement('div');d.className='pk fly'+(isGlit(p.id)?' glit':'');d.style.backgroundColor=p.c;d.textContent=p.e||'';d.style.left=lastTap.x+'px';d.style.top=lastTap.y+'px';d.style.setProperty('--dx',(Math.random()*240-120)+'px');d.style.setProperty('--dy',(60+Math.random()*160)+'px');d.style.setProperty('--r',(Math.random()*540-270)+'deg');document.body.appendChild(d);setTimeout(()=>d.remove(),950)}}
 function draw(){
  $('cash').textContent=money(S.cash);$('rate').textContent=money(lastRate)+'/s';$('fame').textContent='Fame '+Math.floor(S.fame);$('royal').textContent='Royalties '+money(royalty())+'/s';
  $('goal').style.width=Math.min(100,S.earned/1e6*100)+'%';
@@ -244,24 +259,24 @@ function draw(){
   h+='<div class="card slot"><div class="name">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind. Run campaigns in the Office.</div></div>';
   h+='<h3>Your packets</h3>';
   ownedList().forEach(p=>{const lc=lineCost(p.id);
-   h+='<div class="card"><div class="row">'+pk(p.c,isGlit(p.id))+'<div class="grow"><div class="name">'+p.n+(isGlit(p.id)?'<span class="tag gl">GLITTER</span>':'')+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+(evOn(p.id)?'<span class="tag evt">NEWS</span>':'')+'</div><div class="meta">Stock '+num(S.stock[p.id]||0)+' . Lines '+(S.lines[p.id]||0)+' . Cost '+money(costOf(p))+' . Wholesale '+money(priceOf(p))+'</div></div></div>'+
+   h+='<div class="card"><div class="row">'+pk(p.c,isGlit(p.id),p.e)+'<div class="grow"><div class="name">'+p.n+(isGlit(p.id)?'<span class="tag gl">GLITTER</span>':'')+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+(evOn(p.id)?'<span class="tag evt">NEWS</span>':'')+'</div><div class="meta">Stock '+num(S.stock[p.id]||0)+' . Lines '+(S.lines[p.id]||0)+' . Cost '+money(costOf(p))+' . Wholesale '+money(priceOf(p))+'</div></div></div>'+
    '<div class="btns"><button class="act" data-do="squeeze(\''+p.id+'\')">Squeeze '+tapAmt()+'</button><button class="act alt" '+(S.cash<lc?'disabled':'')+' data-do="buyLine(\''+p.id+'\')">Line '+money(lc)+'</button><button class="act ok" '+(isGlit(p.id)||S.cash<glitCost(p)?'disabled':'')+' data-do="glitter(\''+p.id+'\')">'+(isGlit(p.id)?'Glittered':'Glitter '+money(glitCost(p)))+'</button></div></div>'});
   h+='<div class="flav" style="padding:4px">Wholesale buyers take staples fast and novelties slowly. Margins are thin. That is the whole point.</div>';
  }
  if(tab==='lab'){
-  if(S.rd){const p=byId(S.rd.id);h+='<div class="card slot"><div class="row">'+pk(p.c)+'<div class="grow"><div class="name">Researching '+p.n+'</div><div class="meta">'+Math.ceil(S.rd.left)+'s left</div><div class="bar"><i style="width:'+(100-S.rd.left/S.rd.tot*100)+'%"></i></div></div></div></div>'}
+  if(S.rd){const p=byId(S.rd.id);h+='<div class="card slot"><div class="row">'+pk(p.c,false,p.e)+'<div class="grow"><div class="name">Researching '+p.n+'</div><div class="meta">'+Math.ceil(S.rd.left)+'s left</div><div class="bar"><i style="width:'+(100-S.rd.left/S.rd.tot*100)+'%"></i></div></div></div></div>'}
   else h+='<div class="card slot"><div class="name">Lab is idle</div><div class="meta">Pick a packet below to invent.</div><div class="bar"><i></i></div></div>';
   h+='<h3>Next big packet</h3>';
   const avail=P.filter(p=>p.tier>0&&!S.owned[p.id]);
   avail.slice(0,5).forEach(p=>{const ok=!p.req||p.req.every(r=>S.owned[r]);
-   h+='<div class="card"><div class="row">'+pk(ok?p.c:'#ddd')+'<div class="grow"><div class="name">'+p.n+'</div><div class="meta">'+money(p.rd)+' . '+p.t+'s . absurdity '+p.tier+'</div><div class="flav">'+(ok?p.f:'Needs '+p.req.map(r=>byId(r).n).join(' and ')+' first.')+'</div></div></div>'+
+   h+='<div class="card"><div class="row">'+pk(ok?p.c:'#ddd',false,ok?p.e:'?')+'<div class="grow"><div class="name">'+p.n+'</div><div class="meta">'+money(p.rd)+' . '+p.t+'s . absurdity '+p.tier+'</div><div class="flav">'+(ok?p.f:'Needs '+p.req.map(r=>byId(r).n).join(' and ')+' first.')+'</div></div></div>'+
    '<div class="btns"><button class="act ok" '+(!ok||S.rd||S.cash<p.rd?'disabled':'')+' data-do="startRD(\''+p.id+'\')">Invent</button></div></div>'});
   if(!avail.length)h+='<div class="card">Every packet that should not exist now exists.</div>';
  }
  if(tab==='gallery'){
   if(!galleryOpen())h+='<div class="card">Invent 3 new packets to open the Packet Gallery.</div>';
   else{h+='<div class="card"><div class="name">Flat price, any packet</div><div class="big" id="flatv">'+money(S.flat)+'</div><input type="range" min="0.05" max="3" step="0.05" value="'+S.flat+'" oninput="setFlat(this.value)"><div class="meta" id="custv">'+custRate().toFixed(2)+' customers per second</div><div class="flav">Each customer grabs a handful of 10 to 40 packets, any mix, one price each. More kinds stocked means more customers.</div></div>';
-   h+='<div class="card"><div class="name">On the shelf: '+variety()+' kinds</div><div class="shelf">'+ownedList().map(p=>'<div class="bin">'+pk((S.stock[p.id]||0)>=1?p.c:'#eee',isGlit(p.id))+num(S.stock[p.id]||0)+'</div>').join('')+'</div></div>';}
+   h+='<div class="card"><div class="name">On the shelf: '+variety()+' kinds</div><div class="shelf">'+ownedList().map(p=>'<div class="bin">'+pk((S.stock[p.id]||0)>=1?p.c:'#eee',isGlit(p.id),p.e)+num(S.stock[p.id]||0)+'</div>').join('')+'</div></div>';}
  }
  if(tab==='office'){
   h+='<h3>Marketing campaigns</h3>';
