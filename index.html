@@ -46,6 +46,10 @@ h3{margin:14px 4px 4px;font-size:14px;color:var(--muted);text-transform:uppercas
 .gcard canvas{display:block;width:100%;height:96px}
 .glg{display:flex;gap:14px;font-size:12px;font-weight:700;height:18px;white-space:nowrap;overflow:hidden}
 .glg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.sorts{display:flex;gap:6px;margin:6px 0;height:36px}
+.sorts button{flex:1;border:2px solid var(--line);background:#fff;border-radius:9px;font-weight:700;font-size:11px;color:var(--ink);padding:0 2px}
+.sorts button.on{border-color:var(--blue);color:var(--blue)}
+.meta2{color:var(--ink);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:16px}
 #ticker{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:2px solid var(--line);padding:8px 12px;font-size:13px;max-height:96px;overflow:hidden;z-index:6}
 #ticker div{padding:2px 0;color:var(--muted)}
 #ticker div:first-child{color:var(--ink);font-weight:600}
@@ -217,7 +221,7 @@ function custRate(){if(!galleryOpen())return 0;const v=variety();return v*0.25*S
 let tab='factory',log=[],lastRate=0,acc=0,cAcc=0,hAcc=0;
 function say(t){log.unshift(t);log=log.slice(0,4);$('ticker').innerHTML=log.map(x=>'<div>'+x+'</div>').join('')}
 function pop(t,b){$('popT').textContent=t;$('popB').textContent=b;$('pop').style.display='flex'}
-function squeeze(id){const p=byId(id),n=tapAmt(),c=n*costOf(p);if(S.cash<c){say('Not enough cash to buy the goop.');return}S.cash-=c;S.stock[id]=(S.stock[id]||0)+n;madeAcc+=n;burst(p,n);draw()}
+function squeeze(id){const p=byId(id),n=tapAmt(),c=n*costOf(p);if(S.cash<c){say('Not enough cash to buy the goop.');return}S.cash-=c;S.stock[id]=(S.stock[id]||0)+n;madeAcc+=n;pa(id).m+=n;pa(id).c+=c;burst(p,n);draw()}
 function buyLine(id){const c=lineCost(id);if(S.cash<c)return;S.cash-=c;S.lines[id]=(S.lines[id]||0)+1;say('New '+byId(id).n+' line installed.');draw()}
 function startRD(id){const p=byId(id);if(S.rd||S.cash<p.rd)return;S.cash-=p.rd;S.rd={id,left:p.t,tot:p.t};say('R and D begins on '+p.n+'. Lab coats on.');draw()}
 function finishRD(){const p=byId(S.rd.id);S.owned[p.id]=1;S.lines[p.id]=0;S.stock[p.id]=0;S.rd=null;S.fame+=p.tier*5;
@@ -280,9 +284,9 @@ function draw(){
  if(tab==='factory'){
   h+=graphHTML();
   h+='<div class="card slot"><div class="name">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind. Run campaigns in the Office.</div></div>';
-  h+='<h3>Your packets</h3>';
-  ownedList().forEach(p=>{const lc=lineCost(p.id);
-   h+='<div class="card"><div class="row">'+pk(p.c,isGlit(p.id),p.e,p.n)+'<div class="grow"><div class="name">'+p.n+(isGlit(p.id)?'<span class="tag gl">GLITTER</span>':'')+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+(evOn(p.id)?'<span class="tag evt">NEWS</span>':'')+'</div><div class="meta">Stock '+num(S.stock[p.id]||0)+' . Lines '+(S.lines[p.id]||0)+' . Cost '+money(costOf(p))+' . Wholesale '+money(priceOf(p))+'</div></div></div>'+
+  h+='<h3>Your packets</h3><div class="sorts">'+SORTS.map(([k,l])=>'<button class="'+((S.sort||'old')===k?'on':'')+'" data-do="setSort(\''+k+'\')">'+l+'</button>').join('')+'</div>';
+  factoryList().forEach(p=>{const lc=lineCost(p.id);
+   h+='<div class="card"><div class="row">'+pk(p.c,isGlit(p.id),p.e,p.n)+'<div class="grow"><div class="name">'+p.n+(isGlit(p.id)?'<span class="tag gl">GLITTER</span>':'')+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+(evOn(p.id)?'<span class="tag evt">NEWS</span>':'')+'</div><div class="meta">Stock '+num(S.stock[p.id]||0)+' . Lines '+(S.lines[p.id]||0)+' . Cost '+money(costOf(p))+' . Wholesale '+money(priceOf(p))+'</div><div class="meta2">Made '+pr(p.id).m.toFixed(1)+'/s . <span style="color:'+(pr(p.id).p<0?'#d8432b':'#2f9e5b')+'">Profit '+(pr(p.id).p<0?'-':'')+money(Math.abs(pr(p.id).p))+'/s</span></div></div></div>'+
    '<div class="btns"><button class="act" data-do="squeeze(\''+p.id+'\')">Squeeze '+tapAmt()+'</button><button class="act alt" '+(S.cash<lc?'disabled':'')+' data-do="buyLine(\''+p.id+'\')">Line '+money(lc)+'</button><button class="act ok" '+(isGlit(p.id)||S.cash<glitCost(p)?'disabled':'')+' data-do="glitter(\''+p.id+'\')">'+(isGlit(p.id)?'Glittered':'Glitter '+money(glitCost(p)))+'</button></div></div>'});
   h+='<div class="flav" style="padding:4px">Wholesale buyers take staples fast and novelties slowly. Margins are thin. That is the whole point.</div>';
  }
@@ -321,17 +325,17 @@ document.querySelector('nav').addEventListener('click',e=>{const b=e.target.clos
 let before=S.cash,secAcc=0,earnSec=0;
 function tick(dt){
  let gain=0;
- ownedList().forEach(p=>{const n=(S.lines[p.id]||0)*lineRate()*dt;const c=n*costOf(p);if(S.cash>=c){S.cash-=c;gain-=c;S.stock[p.id]=(S.stock[p.id]||0)+n;madeAcc+=n}
-  const cap=(p.tier===0?14:1.5)*dt*demOf(p);const sold=Math.min(S.stock[p.id]||0,cap);S.stock[p.id]-=sold;soldAcc+=sold;const r=sold*priceOf(p);S.cash+=r;gain+=r;S.earned+=r});
+ ownedList().forEach(p=>{const n=(S.lines[p.id]||0)*lineRate()*dt;const c=n*costOf(p);if(S.cash>=c){S.cash-=c;gain-=c;S.stock[p.id]=(S.stock[p.id]||0)+n;madeAcc+=n;pa(p.id).m+=n;pa(p.id).c+=c}
+  const cap=(p.tier===0?14:1.5)*dt*demOf(p);const sold=Math.min(S.stock[p.id]||0,cap);S.stock[p.id]-=sold;soldAcc+=sold;const r=sold*priceOf(p);pa(p.id).r+=r;S.cash+=r;gain+=r;S.earned+=r});
  if(galleryOpen()){cAcc+=custRate()*dt;while(cAcc>=1){cAcc-=1;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1);if(!shelf.length)break;let want=10+Math.floor(Math.random()*31),got=0;
-  for(let i=0;i<want;i++){const p=shelf[Math.floor(Math.random()*shelf.length)];if(S.stock[p.id]>=1){S.stock[p.id]-=1;got++}}
+  for(let i=0;i<want;i++){const p=shelf[Math.floor(Math.random()*shelf.length)];if(S.stock[p.id]>=1){S.stock[p.id]-=1;got++;pa(p.id).r+=S.flat}}
   soldAcc+=got;const r=got*S.flat;S.cash+=r;gain+=r;S.earned+=r;S.fame+=got*0.002}}
  const roy=royalty()*dt;S.cash+=roy;gain+=roy;S.earned+=roy;
  S.events=(S.events||[]).filter(e=>{e.left-=dt;if(e.left<=0){say(e.n+' is old news. Market back to normal.');return false}return true});
  if($('evt').style.display!=='block'){S.nextEvt=(S.nextEvt==null?75:S.nextEvt)-dt;if(S.nextEvt<=0){S.nextEvt=70+Math.random()*80;fireEvent()}}
  if(S.camp){S.camp.left-=dt;if(S.camp.left<=0){say(S.camp.n+' wrapped up. Demand back to normal.');S.camp=null}}
  if(S.rd){S.rd.left-=dt;if(S.rd.left<=0)finishRD()}
- gAcc+=dt;if(gAcc>=1){hist.push({m:madeAcc/gAcc,s:soldAcc/gAcc});if(hist.length>120)hist.shift();madeAcc=0;soldAcc=0;gAcc=0;drawGraphs()}
+ gAcc+=dt;if(gAcc>=1){hist.push({m:madeAcc/gAcc,s:soldAcc/gAcc});for(const id in pacc){const a=pacc[id],o=pr(id);prate[id]={m:o.m*.8+a.m/gAcc*.2,p:o.p*.8+(a.r-a.c)/gAcc*.2};a.m=a.r=a.c=0}if(hist.length>120)hist.shift();madeAcc=0;soldAcc=0;gAcc=0;drawGraphs()}
  secAcc+=dt;earnSec+=gain;if(secAcc>=1){lastRate=earnSec/secAcc;secAcc=0;earnSec=0}
  hAcc+=dt;if(hAcc>22){hAcc=0;if(novelCount()>0)say(HEADS[Math.floor(Math.random()*HEADS.length)])}
  if(!S.won&&S.earned>=1e6){S.won=true;pop('YOU ARE THE KETCHUP GUY NOW','One million dollars from packets that never should have existed. Keep inventing.')}
@@ -384,7 +388,12 @@ function drawTower(t){const c=$('tw');if(!c)return;const fl=towerFloors(),W=c.cl
  if(open){const cr=Math.min(6,Math.ceil(custRate()));for(let k=0;k<cr;k++){const px=(sec*40+k*70)%(bw)+bx;x.font='14px system-ui';x.fillText('🧍',px,H-26)}}
 }
 
-let hist=[],madeAcc=0,soldAcc=0,gAcc=0;
+let hist=[],madeAcc=0,soldAcc=0,gAcc=0,pacc={},prate={},sortOrder=null;
+function pa(id){return pacc[id]||(pacc[id]={m:0,r:0,c:0})}
+function pr(id){return prate[id]||{m:0,p:0}}
+const SORTS=[['new','Newest'],['most','Most made'],['least','Least made'],['prof','Most profit'],['loss','Least profit']];
+function setSort(k){S.sort=k;const L=ownedList().slice();const f={new:(a,b)=>P.indexOf(b)-P.indexOf(a),most:(a,b)=>pr(b.id).m-pr(a.id).m,least:(a,b)=>pr(a.id).m-pr(b.id).m,prof:(a,b)=>pr(b.id).p-pr(a.id).p,loss:(a,b)=>pr(a.id).p-pr(b.id).p}[k];sortOrder=k==='new'?null:L.sort(f).map(p=>p.id);draw()}
+function factoryList(){const L=ownedList();if(!sortOrder)return S.sort==='new'?L.slice().reverse():L;const idx=id=>{const i=sortOrder.indexOf(id);return i<0?-1:i};return L.slice().sort((a,b)=>idx(a.id)-idx(b.id))}
 function graphHTML(){return '<div class="card gcard"><div class="glg"><span><i style="background:#2d6cdf"></i>Made <span class="gm">0</span>/s</span><span><i style="background:#2f9e5b"></i>Sold <span class="gs">0</span>/s</span><span class="gp" style="color:#7a6e66"></span></div><canvas class="gr"></canvas></div>'}
 function drawGraphs(){document.querySelectorAll('canvas.gr').forEach(c=>{const W=c.clientWidth,H=96,d=window.devicePixelRatio||1;if(!W)return;
  if(c.width!==Math.round(W*d)){c.width=Math.round(W*d);c.height=Math.round(H*d)}const x=c.getContext('2d');x.setTransform(d,0,0,d,0,0);x.clearRect(0,0,W,H);
