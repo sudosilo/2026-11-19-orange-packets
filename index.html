@@ -152,6 +152,10 @@ const P=[
  {id:'rcs',e:'🐓',n:"Red Chili Sauce",c:'#e63912',cost:0.034,price:0.09,tier:2,rd:350,t:25,f:"Green cap energy, packet shaped."},
  {id:'pudding',e:'🍌',n:'Banana Pudding',c:'#f5dc7a',cost:.07,price:.15,tier:2,rd:400,t:25,f:'Squeeze directly into mouth. Wafer sold separately.'},
  {id:'hony',e:'🍯',n:"Honey",c:'#f0a500',cost:0.032,price:0.083,tier:2,rd:430,t:25,f:"Bees did all the work."},
+ {id:'butter',e:'🧈',n:"Butter",c:'#f7df7a',cost:0.02,price:0.055,tier:1,rd:100,t:15,f:"One pat. Room temperature forever."},
+ {id:'chhony',e:'🌶️',n:"Chipotle Honey",c:'#b5461f',cost:0.038,price:0.1,tier:2,rd:520,t:25,f:"Sweet, then smoky, then a small regret."},
+ {id:'wmhony',e:'🍉',n:"Watermelon Honey",c:'#ff5f7e',cost:0.04,price:0.105,tier:2,rd:560,t:25,f:"The bees went to a picnic."},
+ {id:'pshony',e:'🌰',n:"Pistachio Honey",c:'#93c572',cost:0.045,price:0.12,tier:2,rd:600,t:25,f:"Green honey. Nobody trusts it. Everybody buys it."},
  {id:'sals',e:'🍅',n:"Salsa",c:'#d9381e',cost:0.04,price:0.113,tier:2,rd:450,t:25,f:"Chunky enough to clog the tear notch."},
  {id:'ccc',e:'🍪',n:"Chocolate Chip Cookie Crumble",c:'#a0522d',cost:0.032,price:0.092,tier:2,rd:570,t:25,f:"One cookie, aggressively crumbled."},
  {id:'punch',e:'🍹',n:'Fruit Punch Premix',c:'#e0245e',cost:.05,price:.12,tier:2,rd:600,t:30,f:'Just add a gallon of water and a pitcher you do not have.'},
@@ -354,7 +358,11 @@ const MIXN=20;
 function mixOpen(){return novelCount()>=MIXN}
 function comboObj(c){const A=byId(c.a),B=byId(c.b);return {id:c.id,combo:1,a:c.a,b:c.b,n:'Half '+A.n+' Half '+B.n,short:A.n+' + '+B.n,e:A.e+B.e,c:A.c+'|'+B.c,cost:+((A.cost+B.cost)/2).toFixed(4),price:+((A.price+B.price)/2*1.6).toFixed(4),tier:Math.max(A.tier,B.tier,1),f:'Two packets enter. One packet leaves.'}}
 (S.combos||[]).forEach(c=>{if(byId(c.a)&&byId(c.b)&&!byId(c.id))P.push(comboObj(c))});
-function spinCost(){return 250*Math.pow(1.6,S.spins||0)}
+function promoOn(k){return !!(S.promo&&S.promo.k===k)}
+function spinCost(){return 250*Math.pow(1.6,S.spins||0)*(promoOn('mix')?.5:1)}
+const PROMOS={mix:{n:'50/50 Half Off Sale',b:'Every 50/50 Machine spin costs half price for the next 5 minutes. Spin while it lasts.'},rd:{n:'Lab Overtime',b:'The lab is running double shifts. R and D runs 25 percent faster for the next 5 minutes.'}};
+function promoTick(dt){if(S.promo){S.promo.left-=dt;if(S.promo.left<=0){say(PROMOS[S.promo.k].n+' is over.');S.promo=null;mixSig='';fSig=''}return}S.nextPromo=(S.nextPromo==null?240:S.nextPromo)-dt;if(S.nextPromo<=0){S.nextPromo=600+Math.random()*600;const ks=Object.keys(PROMOS).filter(k=>k!=='mix'||mixOpen()),k=ks[Math.floor(Math.random()*ks.length)];S.promo={k,left:300};mixSig='';pop(PROMOS[k].n,PROMOS[k].b);say(PROMOS[k].n+' started. 5 minutes.')}}
+function promoHTML(k){return promoOn(k)?'<div class="card slot"><div class="name">'+PROMOS[k].n+'<span class="tag hit" id="prl">'+Math.ceil(S.promo.left)+'s left</span></div><div class="meta">'+PROMOS[k].b+'</div></div>':''}
 let spinning=false,mixSig='';
 function pairKey(a,b){return a<b?a+'~'+b:b+'~'+a}
 function madePairs(){const m=new Set();(S.combos||[]).forEach(c=>m.add(pairKey(c.a,c.b)));return m}
@@ -508,8 +516,8 @@ function draw(){
  }
  if(tab==='mix'){
   const CS=S.combos||[],sig=CS.length+'|'+(CS.length?CS[CS.length-1].id:'')+'|'+CS.slice(-30).map(c=>lvl(c.id)).join('')+spinning+'|'+(S.mixRd?S.mixRd.a+S.mixRd.b:'');
-  if(sig===mixSig&&$('mixm')){const b=$('spinb');if(b){b.disabled=spinning||!!S.mixRd||S.cash<spinCost();b.textContent=S.mixRd?'Researching '+Math.ceil(S.mixRd.left)+'s':'Spin '+money(spinCost())}const mb=$('mixbar');if(mb&&S.mixRd)mb.style.width=(100-S.mixRd.left/S.mixRd.tot*100)+'%';return}
-  mixSig=sig;const MR=S.mixRd,last=MR?{a:MR.a,b:MR.b,c:byId(MR.a).c+'|'+byId(MR.b).c,e:byId(MR.a).e+byId(MR.b).e,short:byId(MR.a).n+' + '+byId(MR.b).n,n:'Half '+byId(MR.a).n+' Half '+byId(MR.b).n,id:'_mr'}:(S.lastMix&&byId(S.lastMix));
+  if(sig===mixSig&&$('mixm')){{const pl=$('prl');if(pl&&S.promo)pl.textContent=Math.ceil(S.promo.left)+'s left'}const b=$('spinb');if(b){b.disabled=spinning||!!S.mixRd||S.cash<spinCost();b.textContent=S.mixRd?'Researching '+Math.ceil(S.mixRd.left)+'s':'Spin '+money(spinCost())}const mb=$('mixbar');if(mb&&S.mixRd)mb.style.width=(100-S.mixRd.left/S.mixRd.tot*100)+'%';return}
+  mixSig=sig;h+=promoHTML('mix');const MR=S.mixRd,last=MR?{a:MR.a,b:MR.b,c:byId(MR.a).c+'|'+byId(MR.b).c,e:byId(MR.a).e+byId(MR.b).e,short:byId(MR.a).n+' + '+byId(MR.b).n,n:'Half '+byId(MR.a).n+' Half '+byId(MR.b).n,id:'_mr'}:(S.lastMix&&byId(S.lastMix));
   h+='<div class="card" id="mixm" style="height:236px;text-align:center"><div class="name">The 50/50 Machine</div><div class="meta">Two packets in, one brand new flavor out.</div>'+
    '<div class="row" style="justify-content:center;gap:8px;height:70px;margin-top:8px"><div id="r1">'+(last?pk(byId(last.a).c,0,byId(last.a).e,byId(last.a).n):pk('#dddddd',0,'?','???'))+'</div><div class="big">+</div><div id="r2">'+(last?pk(byId(last.b).c,0,byId(last.b).e,byId(last.b).n):pk('#dddddd',0,'?','???'))+'</div><div class="big">=</div><div>'+(last?pk(last.c,lvl(last.id),last.e,last.short):pk('#dddddd',0,'?','???'))+'</div></div>'+
    '<div class="meta" style="margin-top:4px">'+(MR?'Researching: ':'')+(last?last.n:'Spin to make your first 50/50')+'</div>'+
@@ -520,7 +528,8 @@ function draw(){
   (S.combos||[]).slice(-30).reverse().forEach(c=>{const p=byId(c.id);if(p)h+=mixCard(p)});if((S.combos||[]).length>30)h+='<div class="flav" style="padding:4px">Showing the newest 30. Every mix lives in the Factory and Tower under both of its ingredients.</div>';
   if(!(S.combos||[]).length)h+='<div class="flav" style="padding:4px">Every 50/50 also joins your Factory and Tower as its own packet line.</div>';
  }
- if(tab==='lab'){
+  if(tab==='lab'){
+  h+=promoHTML('rd');
   if(S.rd){const p=byId(S.rd.id);h+='<div class="card slot"><div class="row">'+pk(p.c,false,p.e,p.short||p.n)+'<div class="grow"><div class="name">Researching '+p.n+'</div><div class="meta">'+Math.ceil(S.rd.left)+'s left</div><div class="bar"><i style="width:'+(100-S.rd.left/S.rd.tot*100)+'%"></i></div></div></div></div>'}
   else h+='<div class="card slot"><div class="name">Lab is idle</div><div class="meta">Pick a packet below to invent.</div><div class="bar"><i></i></div></div>';
   h+='<h3>Next big packet</h3>';
@@ -571,7 +580,8 @@ function tick(dt){
  if($('evt').style.display!=='block'){S.nextEvt=(S.nextEvt==null?75:S.nextEvt)-dt;if(S.nextEvt<=0){S.nextEvt=70+Math.random()*80;fireEvent()}}
  if(S.camp){S.camp.left-=dt;if(S.camp.left<=0){say(S.camp.n+' wrapped up. Demand back to normal.');S.camp=null}}
  if(S.mixRd){S.mixRd.left-=dt;if(S.mixRd.left<=0)finishMix()}
- if(S.rd){S.rd.left-=dt;if(S.rd.left<=0)finishRD()}
+ if(S.rd){S.rd.left-=dt*(promoOn('rd')?1.25:1);if(S.rd.left<=0)finishRD()}
+ promoTick(dt);
  gAcc+=dt;if(gAcc>=1){hist.push({m:madeAcc/gAcc,s:soldAcc/gAcc});for(const id in pacc){const a=pacc[id],o=pr(id);prate[id]={m:o.m*.8+a.m/gAcc*.2,p:o.p*.8+(a.r-a.c)/gAcc*.2};a.m=a.r=a.c=0}if(hist.length>120)hist.shift();madeAcc=0;soldAcc=0;gAcc=0;drawGraphs()}
  secAcc+=dt;earnSec+=gain;if(secAcc>=1){lastRate=earnSec/secAcc;secAcc=0;earnSec=0}
  hAcc+=dt;if(hAcc>22){hAcc=0;if(novelCount()>0)say(HEADS[Math.floor(Math.random()*HEADS.length)])}
