@@ -50,6 +50,8 @@ h3{margin:14px 4px 4px;font-size:14px;color:var(--muted);text-transform:uppercas
 .sorts button{flex:1;border:2px solid var(--line);background:#fff;border-radius:9px;font-weight:700;font-size:11px;color:var(--ink);padding:0 2px}
 .sorts button.on{border-color:var(--blue);color:var(--blue)}
 .meta2{color:var(--ink);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:16px}
+button.act.mini{flex:0 0 50px;font-size:12px}
+button.act.stop{background:#7a6e66}
 #ticker{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:2px solid var(--line);padding:8px 12px;font-size:13px;max-height:96px;overflow:hidden;z-index:6}
 #ticker div{padding:2px 0;color:var(--muted)}
 #ticker div:first-child{color:var(--ink);font-weight:600}
@@ -323,8 +325,13 @@ function comboObj(c){const A=byId(c.a),B=byId(c.b);return {id:c.id,combo:1,a:c.a
 (S.combos||[]).forEach(c=>{if(byId(c.a)&&byId(c.b)&&!byId(c.id))P.push(comboObj(c))});
 function spinCost(){return 250*Math.pow(1.6,S.spins||0)}
 let spinning=false,mixSig='';
-function spinMix(){const c=spinCost();if(spinning||S.cash<c||!mixOpen())return;const pool=ownedList().filter(p=>!p.combo);if(pool.length<2)return;S.cash-=c;S.spins=(S.spins||0)+1;spinning=true;mixSig='';
- let A,B,tries=0;do{A=pool[Math.floor(Math.random()*pool.length)];B=pool[Math.floor(Math.random()*pool.length)];tries++}while((A===B||(S.combos||[]).some(x=>x.a===A.id&&x.b===B.id))&&tries<50);
+function pairKey(a,b){return a<b?a+'~'+b:b+'~'+a}
+function madePairs(){const m=new Set();(S.combos||[]).forEach(c=>m.add(pairKey(c.a,c.b)));return m}
+function pickPair(pool){const m=madePairs();for(let i=0;i<300;i++){const A=pool[Math.floor(Math.random()*pool.length)],B=pool[Math.floor(Math.random()*pool.length)];if(A!==B&&!m.has(pairKey(A.id,B.id)))return [A,B]}
+ const free=[];for(let i=0;i<pool.length;i++)for(let j=i+1;j<pool.length;j++)if(!m.has(pairKey(pool[i].id,pool[j].id)))free.push([pool[i],pool[j]]);return free.length?free[Math.floor(Math.random()*free.length)]:null}
+function pairsTotal(n){return n*(n-1)/2}
+function spinMix(){const c=spinCost();if(spinning||S.cash<c||!mixOpen())return;const pool=ownedList().filter(p=>!p.combo);if(pool.length<2)return;if(!pickPair(pool)){say('Every possible flavor from your current packets is already made. Invent more packets.');return}S.cash-=c;S.spins=(S.spins||0)+1;spinning=true;mixSig='';
+ const pair=pickPair(pool);if(!pair){say('The 50/50 Machine has made every possible flavor from your packets. Invent more packets to unlock more.');return}const [A,B]=pair;
  const st=0,iv=setInterval(()=>{const r1=$('r1'),r2=$('r2');const q=pool[Math.floor(Math.random()*pool.length)],w=pool[Math.floor(Math.random()*pool.length)];if(r1)r1.innerHTML=pk(q.c,0,q.e,q.n);if(r2)r2.innerHTML=pk(w.c,0,w.e,w.n)},90);
  setTimeout(()=>{clearInterval(iv);S.combos=S.combos||[];S.cid=(S.cid||0)+1;const id='x'+S.cid,co={id,a:A.id,b:B.id,base:c};S.combos.push(co);const o=comboObj(co);P.push(o);
   S.owned[id]=1;S.lines[id]=0;S.stock[id]=0;S.style=S.style||{};S.style[id]=st;spinning=false;mixSig='';fSig='';S.fame+=5*(st+1);
@@ -416,12 +423,15 @@ function pk(c,g,e,n,small){const l=typeof g==='number'?g:(g?1:0);return '<div cl
 function burst(p,n){const k=Math.min(14,4+Math.floor(n/10));for(let i=0;i<k;i++){const d=document.createElement('div');d.className='pk fly'+(lvl(p.id)?' glit s'+lvl(p.id):'');d.innerHTML=pkSvg(p.c,p.e,p.short||p.n,34,26,true);d.style.left=lastTap.x+'px';d.style.top=lastTap.y+'px';d.style.setProperty('--dx',(Math.random()*240-120)+'px');d.style.setProperty('--dy',(60+Math.random()*160)+'px');d.style.setProperty('--r',(Math.random()*540-270)+'deg');document.body.appendChild(d);setTimeout(()=>d.remove(),950)}}
 function fTags(p){const l=lvl(p.id);return p.n+(l?'<span class="tag '+(l===1?'gl':'st')+'">'+STYLES[l].b.toUpperCase()+'</span>':'')+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+(p.combo?'<span class="tag st">50/50</span>':'')+(evOn(p.id)?'<span class="tag evt">NEWS</span>':'')}
 function fM1(p){return 'Stock '+num(S.stock[p.id]||0)+' . Lines '+num(S.lines[p.id]||0)+' . Cost '+money(costOf(p))+' . Wholesale '+money(priceOf(p))}
-function fM2(p){return 'Made '+big(pr(p.id).m,1)+'/s . <span style="color:'+(pr(p.id).p<0?'#d8432b':'#2f9e5b')+'">Profit '+(pr(p.id).p<0?'-':'')+money(Math.abs(pr(p.id).p))+'/s</span>'}
+function fM2(p){return (isPaused(p.id)?'<span style="color:#d8432b">STOPPED</span> . ':'')+'Made '+big(pr(p.id).m,1)+'/s . <span style="color:'+(pr(p.id).p<0?'#d8432b':'#2f9e5b')+'">Profit '+(pr(p.id).p<0?'-':'')+money(Math.abs(pr(p.id).p))+'/s</span>'}
 function fLine(p){const lc=lineCost(p.id);return '<button class="act alt" '+(S.cash<lc?'disabled':'')+' data-do="buyLine(\''+p.id+'\')">'+(lineQty(p.id)>1?'+'+num(lineQty(p.id))+' ':'Line ')+money(lc)+'</button>'}
 function fCard(p){return '<div class="card" id="c_'+p.id+'"><div class="row">'+pk(p.c,lvl(p.id),p.e,p.short||p.n)+'<div class="grow"><div class="name" id="n_'+p.id+'">'+fTags(p)+'</div><div class="meta" id="a_'+p.id+'">'+fM1(p)+'</div><div class="meta2" id="b_'+p.id+'">'+fM2(p)+'</div></div></div>'+
- '<div class="btns"><button class="act" data-do="squeeze(\''+p.id+'\')">Squeeze '+tapAmt()+'</button><span id="l_'+p.id+'" style="display:contents">'+fLine(p)+'</span><span id="g_'+p.id+'" style="display:contents">'+styleBtn(p)+'</span></div></div>'}
+ '<div class="btns"><button class="act" data-do="squeeze(\''+p.id+'\')">Squeeze '+tapAmt()+'</button><span id="p_'+p.id+'" style="display:contents">'+fPause(p)+'</span><span id="l_'+p.id+'" style="display:contents">'+fLine(p)+'</span><span id="g_'+p.id+'" style="display:contents">'+styleBtn(p)+'</span></div></div>'}
+function isPaused(id){return !!(S.paused&&S.paused[id])}
+function togglePause(id){S.paused=S.paused||{};S.paused[id]=!S.paused[id];say(byId(id).n+(S.paused[id]?' lines stopped. No more goop spent.':' lines running again.'));draw()}
+function fPause(p){return '<button class="act mini '+(isPaused(p.id)?'ok':'stop')+'" data-do="togglePause(\''+p.id+'\')">'+(isPaused(p.id)?'Run':'Stop')+'</button>'}
 function setH(id,v){const e=document.getElementById(id);if(e&&e.innerHTML!==v)e.innerHTML=v}
-function patchFactory(){$('dem').innerHTML='Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'');factoryList().forEach(p=>{setH('n_'+p.id,fTags(p));setH('a_'+p.id,fM1(p));setH('b_'+p.id,fM2(p));setH('l_'+p.id,fLine(p));setH('g_'+p.id,styleBtn(p))})}
+function patchFactory(){$('dem').innerHTML='Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'');factoryList().forEach(p=>{setH('n_'+p.id,fTags(p));setH('a_'+p.id,fM1(p));setH('b_'+p.id,fM2(p));setH('l_'+p.id,fLine(p));setH('g_'+p.id,styleBtn(p));setH('p_'+p.id,fPause(p))})}
 let fSig='';
 function draw(){
  $('cash').textContent=money(S.cash);$('rate').textContent=money(lastRate)+'/s';$('fame').textContent='Fame '+Math.floor(S.fame);$('royal').textContent='Royalties '+money(royalty())+'/s';
@@ -449,6 +459,7 @@ function draw(){
    '<div class="meta" style="margin-top:4px">'+(last?(lvl(last.id)?STYLES[lvl(last.id)].n+' ':'')+last.n:'Spin to make your first 50/50')+'</div>'+
    '<div class="meta">Each new flavor is a new floor. Build lines and power it up like any packet.</div>'+
    '<div class="btns"><button class="act" id="spinb" '+(spinning||S.cash<spinCost()?'disabled':'')+' data-do="spinMix()">'+(spinning?'Spinning...':'Spin '+money(spinCost()))+'</button></div></div>';
+  {const own=ownedList().filter(p=>!p.combo).length,all=P.filter(p=>!p.combo).length;h+='<div class="card"><div class="name">Flavors made '+num((S.combos||[]).length)+'</div><div class="meta">Possible with your '+own+' packets: '+num(pairsTotal(own))+'</div><div class="meta">Possible with all '+all+' packets: '+pairsTotal(all).toLocaleString()+'</div></div>'}
   h+='<h3>Your 50/50 flavors ('+(S.combos||[]).length+')</h3>';
   (S.combos||[]).slice().reverse().forEach(c=>{const p=byId(c.id);if(p)h+=mixCard(p)});
   if(!(S.combos||[]).length)h+='<div class="flav" style="padding:4px">Every 50/50 also joins your Factory and Tower as its own packet line.</div>';
@@ -488,7 +499,7 @@ document.querySelector('nav').addEventListener('click',e=>{const b=e.target.clos
 let before=S.cash,secAcc=0,earnSec=0;
 function tick(dt){
  let gain=0;
- ownedList().forEach(p=>{const n=(S.lines[p.id]||0)*lineRate()*dt;const c=n*costOf(p);if(S.cash>=c){S.cash-=c;gain-=c;S.stock[p.id]=(S.stock[p.id]||0)+n;madeAcc+=n;pa(p.id).m+=n;pa(p.id).c+=c}
+ ownedList().forEach(p=>{const n=isPaused(p.id)?0:(S.lines[p.id]||0)*lineRate()*dt;const c=n*costOf(p);if(S.cash>=c){S.cash-=c;gain-=c;S.stock[p.id]=(S.stock[p.id]||0)+n;madeAcc+=n;pa(p.id).m+=n;pa(p.id).c+=c}
   const cap=(p.tier===0?14:1.5)*dt*demOf(p);const sold=Math.min(S.stock[p.id]||0,cap);S.stock[p.id]-=sold;soldAcc+=sold;const r=sold*priceOf(p);pa(p.id).r+=r;S.cash+=r;gain+=r;S.earned+=r});
  if(galleryOpen()){cAcc+=custRate()*dt;const cust=Math.floor(cAcc);if(cust>=1){cAcc-=cust;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1);
   if(shelf.length){let want=cust<=20?Array.from({length:cust},()=>10+Math.floor(Math.random()*31)).reduce((a,b)=>a+b,0):cust*25,got=0;
@@ -535,9 +546,9 @@ function drawTower(t){const c=$('tw');if(!c)return;const fl=towerFloors(),W=c.cl
   // machines
   const nm2=Math.min(lines,FULL);if(nm2===0){x.font='16px system-ui';x.textAlign='center';x.fillText('✋',rx+built/2,y+24)}
   for(let m=0;m<nm2;m++){const mx=rx+6+m*(rw/FULL);x.fillStyle=p.c;rr(x,mx,y+10,rw/FULL-8,16,4);x.fill();x.strokeStyle='rgba(0,0,0,.25)';x.stroke();
-   x.fillStyle=Math.sin(sec*6+m)>0?'#2f9e5b':'#d8432b';x.beginPath();x.arc(mx+5,y+15,2.5,0,7);x.fill()}
+   x.fillStyle=isPaused(p.id)?'#d8432b':(Math.sin(sec*6+m)>0?'#2f9e5b':'#d8432b');x.beginPath();x.arc(mx+5,y+15,2.5,0,7);x.fill()}
   // moving packets
-  const n=Math.min(24,lines*2+(S.stock[p.id]>0?1:0)),sp=20+lineRate()*6;
+  const n=isPaused(p.id)?0:Math.min(24,lines*2+(S.stock[p.id]>0?1:0)),sp=20+lineRate()*6;
   for(let k=0;k<n;k++){const px=rx+4+((sec*sp+k*(built/Math.max(1,n)))%(built-16));zig(x,px,cy-10,13,10,p.c)}
   // stock and tags
   x.fillStyle='#2b2420';x.font='700 10px system-ui';x.textAlign='left';x.fillText(num(S.stock[p.id]||0),bx+40,y+15);x.fillStyle='#7a6e66';x.fillText(lines+' lines',bx+40,y+28);
