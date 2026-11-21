@@ -493,7 +493,7 @@ function draw(){
   if(sig===fSig&&$('dem')){patchFactory();drawGraphs();return}
   fSig=sig;
   h+=graphHTML();
-  h+='<div class="card slot"><div class="name" id="dem">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind, before price. Higher prices mean fewer buyers.</div><div class="btns"><button class="act alt" data-do="mkAll(-1)">All prices -</button><button class="act alt" data-do="mkAll(1)">All prices +</button></div></div>';
+  h+='<div class="card slot"><div class="name" id="dem">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind, plus '+Math.round(90*demandMult())+' percent of what each packet line makes, before price. Higher prices mean fewer buyers.</div><div class="btns"><button class="act alt" data-do="mkAll(-1)">All prices -</button><button class="act alt" data-do="mkAll(1)">All prices +</button></div></div>';
   h+='<h3>Your packets</h3><div class="sorts">'+[[1,'Buy x1'],[10,'Buy x10'],[100,'Buy x100'],['max','Buy max']].map(([q,l])=>'<button class="'+((S.buyQty||1)===q?'on':'')+'" data-do="setQty('+(q==='max'?"\'max\'":q)+')">'+l+'</button>').join('')+'</div><div class="sorts">'+SORTS.map(([k,l])=>'<button class="'+((S.sort||'old')===k?'on':'')+'" data-do="setSort(\''+k+'\')">'+l+'</button>').join('')+'</div>';
   fEntries().forEach(([p,f])=>{h+=fCard(p,f)});{const left=factoryList().length-fLim;if(left>0)h+='<div class="btns"><button class="act alt" data-do="moreCards()">Show 200 more ('+num(left)+' left)</button></div>'}
   h+='<div class="flav" style="padding:4px">Wholesale buyers take staples fast and novelties slowly. Margins are thin. That is the whole point.</div>';
@@ -551,7 +551,7 @@ function tick(dt){
  const OL=ownedList();for(let i=0;i<OL.length;i++){const p=OL[i],id=p.id,ln=S.lines[id]||0,stk=S.stock[id]||0;if(!ln&&stk<=0)continue;
   const l=ST[id]||0,sm=l?STYLES[l]:null,ec=EV?evFx(id,'cost'):1,ep=EV?evFx(id,'price'):1,ed=EV?evFx(id,'dem'):1;
   let st=stk;if(ln&&MD[id]!==2&&!(MD[id]==null&&PS[id])){const n=ln*LRt,c=n*p.cost*ec*(sm?sm.cm:1);if(S.cash>=c){S.cash-=c;gain-=c;st+=n;madeAcc+=n;const A=pa(id);A.m+=n;A.c+=c}}
-  if(st>0&&MD[id]!==1){const mk=MKS[MK[id]==null?MKD:MK[id]],cap=(p.tier===0?14:1.5)*DM*ed*Math.pow(mk,-ELAS),sold=Math.min(st,cap);st-=sold;soldAcc+=sold;const r=sold*p.price*ep*(sm?sm.pm:1)*mk;pa(id).r+=r;S.cash+=r;gain+=r;S.earned+=r}
+  if(st>0&&MD[id]!==1){const mk=MKS[MK[id]==null?MKD:MK[id]],cap=((p.tier===0?14:1.5)*DM+ln*LRt*0.9*DM/dt)*ed*Math.pow(mk,-ELAS),sold=Math.min(st,cap);st-=sold;soldAcc+=sold;const r=sold*p.price*ep*(sm?sm.pm:1)*mk;pa(id).r+=r;S.cash+=r;gain+=r;S.earned+=r}
   S.stock[id]=st}}
  if(galleryOpen()){cAcc+=custRate()*dt;const cust=Math.floor(cAcc);if(cust>=1){cAcc-=cust;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1&&!isHeld(p.id));
   if(shelf.length){let want=cust<=20?Array.from({length:cust},()=>10+Math.floor(Math.random()*31)).reduce((a,b)=>a+b,0):cust*25,got=0;
