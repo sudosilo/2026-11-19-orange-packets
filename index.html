@@ -30,7 +30,7 @@ main{padding:6px 10px 120px}
 .slot{min-height:78px}
 .grow{flex:1;min-width:0}
 .btns{display:flex;gap:6px;margin-top:8px}
-button.act{flex:1;padding:10px 6px;border:none;border-radius:10px;font-weight:700;font-size:13px;color:#fff;background:var(--red)}
+button.act{flex:1;min-width:0;height:44px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px;border:none;border-radius:10px;font-weight:700;font-size:13px;color:#fff;background:var(--red)}
 button.act.alt{background:var(--blue)}
 button.act.ok{background:var(--green)}
 button.act:disabled{background:#cfc6bb}
@@ -199,6 +199,9 @@ const EVENTS=[
  {n:'Pickle Shortage',b:'Cucumbers refuse to pickle this year. Scientists are baffled.',ids:['pickle','spickle'],cost:2.5,price:2.2,dem:1},
  {n:'Ketchup Recall Panic',b:'A rival ketchup recall sends shoppers running to your ketchup.',ids:['ketchup'],cost:1,price:1.3,dem:4}
 ];
+const MILES=['You are the ketchup guy now','Condiment Billionaire','Sauce Sovereign','Packet Emperor','Galactic Squeezer','Multiversal Mustard Lord','Ruler of All Packets'];
+function mileAt(i){return 1e6*Math.pow(1000,i)}
+function mileName(i){return i<MILES.length?MILES[i]:'Packet Baron Level '+(i+1)}
 let S;
 function fresh(){const s={cash:5,fame:0,tapLv:1,lineLv:1,mkt:1,flat:.25,owned:{},lines:{},stock:{},hits:{},rd:null,camp:null,glit:{},events:[],nextEvt:75,demand:1,won:false,earned:0,start:Date.now()};
  STAPLE.forEach(id=>{s.owned[id]=1;s.lines[id]=0;s.stock[id]=0});return s}
@@ -207,9 +210,15 @@ function save(){try{localStorage.setItem('packetbaron1',JSON.stringify(S))}catch
 load();
 const $=id=>document.getElementById(id);
 const byId=id=>P.find(p=>p.id===id);
-function money(v){if(v>=1e6)return '$'+(v/1e6).toFixed(2)+'M';if(v>=1e4)return '$'+(v/1e3).toFixed(1)+'K';return '$'+v.toFixed(2)}
-function num(v){return v>=1e4?(v/1e3).toFixed(1)+'K':Math.floor(v).toString()}
-function lineCost(id){const p=byId(id);return (6+p.tier*25)*Math.pow(1.17,S.lines[id]||0)}
+const SUF=['','K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc'];
+function big(v,dec){if(!isFinite(v))return 'MAX';const a=Math.abs(v);if(a<1e4)return v.toFixed(dec);const e=Math.floor(Math.log10(a)/3);if(e<SUF.length)return (v/Math.pow(1000,e)).toFixed(2)+SUF[e];return v.toExponential(2).replace('e+','e')}
+function money(v){return (v<0?'-$':'$')+big(Math.abs(v),2)}
+function num(v){return Math.abs(v)<1e4?Math.floor(v).toString():big(v,0)}
+const LR=1.17;
+function lineBase(id){const p=byId(id);return (6+p.tier*25)*Math.pow(LR,S.lines[id]||0)}
+function lineQty(id){const q=S.buyQty||1;if(q!=='max')return q;const b=lineBase(id);return Math.max(1,Math.floor(Math.log(S.cash*(LR-1)/b+1)/Math.log(LR)))}
+function lineCost(id){const k=lineQty(id),b=lineBase(id);return b*(Math.pow(LR,k)-1)/(LR-1)}
+function setQty(q){S.buyQty=q;draw()}
 function tapAmt(){return 10*S.tapLv}
 function lineRate(){return 3*Math.pow(1.5,S.lineLv-1)}
 function ownedList(){return P.filter(p=>S.owned[p.id])}
@@ -222,7 +231,7 @@ let tab='factory',log=[],lastRate=0,acc=0,cAcc=0,hAcc=0;
 function say(t){log.unshift(t);log=log.slice(0,4);$('ticker').innerHTML=log.map(x=>'<div>'+x+'</div>').join('')}
 function pop(t,b){$('popT').textContent=t;$('popB').textContent=b;$('pop').style.display='flex'}
 function squeeze(id){const p=byId(id),n=tapAmt(),c=n*costOf(p);if(S.cash<c){say('Not enough cash to buy the goop.');return}S.cash-=c;S.stock[id]=(S.stock[id]||0)+n;madeAcc+=n;pa(id).m+=n;pa(id).c+=c;burst(p,n);draw()}
-function buyLine(id){const c=lineCost(id);if(S.cash<c)return;S.cash-=c;S.lines[id]=(S.lines[id]||0)+1;say('New '+byId(id).n+' line installed.');draw()}
+function buyLine(id){const k=lineQty(id),c=lineCost(id);if(S.cash<c)return;S.cash-=c;S.lines[id]=(S.lines[id]||0)+k;say(k+' new '+byId(id).n+' line'+(k>1?'s':'')+' installed.');draw()}
 function startRD(id){const p=byId(id);if(S.rd||S.cash<p.rd)return;S.cash-=p.rd;S.rd={id,left:p.t,tot:p.t};say('R and D begins on '+p.n+'. Lab coats on.');draw()}
 function finishRD(){const p=byId(S.rd.id);S.owned[p.id]=1;S.lines[p.id]=0;S.stock[p.id]=0;S.rd=null;S.fame+=p.tier*5;
  const chance=0.18+p.tier*0.03;
@@ -276,7 +285,7 @@ function pk(c,g,e,n,small){return '<div class="pk'+(g?' glit':'')+'">'+(small?pk
 function burst(p,n){const k=Math.min(14,4+Math.floor(n/10));for(let i=0;i<k;i++){const d=document.createElement('div');d.className='pk fly'+(isGlit(p.id)?' glit':'');d.innerHTML=pkSvg(p.c,p.e,p.n,34,26,true);d.style.left=lastTap.x+'px';d.style.top=lastTap.y+'px';d.style.setProperty('--dx',(Math.random()*240-120)+'px');d.style.setProperty('--dy',(60+Math.random()*160)+'px');d.style.setProperty('--r',(Math.random()*540-270)+'deg');document.body.appendChild(d);setTimeout(()=>d.remove(),950)}}
 function draw(){
  $('cash').textContent=money(S.cash);$('rate').textContent=money(lastRate)+'/s';$('fame').textContent='Fame '+Math.floor(S.fame);$('royal').textContent='Royalties '+money(royalty())+'/s';
- $('goal').style.width=Math.min(100,S.earned/1e6*100)+'%';
+ {const i=S.mile||0,lo=i?mileAt(i-1):0;$('goal').style.width=Math.min(100,Math.max(0,(S.earned-lo)/(mileAt(i)-lo)*100))+'%'}
  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
  $('galTab').classList.toggle('lock',!galleryOpen());
  let h='';
@@ -284,10 +293,10 @@ function draw(){
  if(tab==='factory'){
   h+=graphHTML();
   h+='<div class="card slot"><div class="name">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind. Run campaigns in the Office.</div></div>';
-  h+='<h3>Your packets</h3><div class="sorts">'+SORTS.map(([k,l])=>'<button class="'+((S.sort||'old')===k?'on':'')+'" data-do="setSort(\''+k+'\')">'+l+'</button>').join('')+'</div>';
+  h+='<h3>Your packets</h3><div class="sorts">'+[[1,'Buy x1'],[10,'Buy x10'],[100,'Buy x100'],['max','Buy max']].map(([q,l])=>'<button class="'+((S.buyQty||1)===q?'on':'')+'" data-do="setQty('+(q==='max'?"\'max\'":q)+')">'+l+'</button>').join('')+'</div><div class="sorts">'+SORTS.map(([k,l])=>'<button class="'+((S.sort||'old')===k?'on':'')+'" data-do="setSort(\''+k+'\')">'+l+'</button>').join('')+'</div>';
   factoryList().forEach(p=>{const lc=lineCost(p.id);
    h+='<div class="card"><div class="row">'+pk(p.c,isGlit(p.id),p.e,p.n)+'<div class="grow"><div class="name">'+p.n+(isGlit(p.id)?'<span class="tag gl">GLITTER</span>':'')+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+(evOn(p.id)?'<span class="tag evt">NEWS</span>':'')+'</div><div class="meta">Stock '+num(S.stock[p.id]||0)+' . Lines '+(S.lines[p.id]||0)+' . Cost '+money(costOf(p))+' . Wholesale '+money(priceOf(p))+'</div><div class="meta2">Made '+pr(p.id).m.toFixed(1)+'/s . <span style="color:'+(pr(p.id).p<0?'#d8432b':'#2f9e5b')+'">Profit '+(pr(p.id).p<0?'-':'')+money(Math.abs(pr(p.id).p))+'/s</span></div></div></div>'+
-   '<div class="btns"><button class="act" data-do="squeeze(\''+p.id+'\')">Squeeze '+tapAmt()+'</button><button class="act alt" '+(S.cash<lc?'disabled':'')+' data-do="buyLine(\''+p.id+'\')">Line '+money(lc)+'</button><button class="act ok" '+(isGlit(p.id)||S.cash<glitCost(p)?'disabled':'')+' data-do="glitter(\''+p.id+'\')">'+(isGlit(p.id)?'Glittered':'Glitter '+money(glitCost(p)))+'</button></div></div>'});
+   '<div class="btns"><button class="act" data-do="squeeze(\''+p.id+'\')">Squeeze '+tapAmt()+'</button><button class="act alt" '+(S.cash<lc?'disabled':'')+' data-do="buyLine(\''+p.id+'\')">'+(lineQty(p.id)>1?'+'+num(lineQty(p.id))+' ':'Line ')+money(lc)+'</button><button class="act ok" '+(isGlit(p.id)||S.cash<glitCost(p)?'disabled':'')+' data-do="glitter(\''+p.id+'\')">'+(isGlit(p.id)?'Glittered':'Glitter '+money(glitCost(p)))+'</button></div></div>'});
   h+='<div class="flav" style="padding:4px">Wholesale buyers take staples fast and novelties slowly. Margins are thin. That is the whole point.</div>';
  }
  if(tab==='lab'){
@@ -312,7 +321,7 @@ function draw(){
   CAMPS.forEach((c,i)=>{h+='<div class="card"><div class="name">'+c.n+'<span class="tag">x'+c.m+' for '+c.t+'s</span></div><div class="flav">'+c.f+'</div><div class="btns"><button class="act ok" '+(S.camp||S.cash<c.c?'disabled':'')+' data-do="runCamp('+i+')">Launch '+money(c.c)+'</button></div></div>'});
   h+='<h3>Upgrades</h3>';
   UP.forEach((u,i)=>{const lv=u.k==='demand'?Math.round((S.demand-1)*2+1):S[u.k];const c=u.c(lv);h+='<div class="card"><div class="name">'+u.n+'<span class="tag">lv '+lv+'</span></div><div class="meta">'+u.d+'</div><div class="btns"><button class="act alt" '+(S.cash<c?'disabled':'')+' data-do="buyUp('+i+')">'+money(c)+'</button></div></div>'});
-  h+='<h3>The dream</h3><div class="card"><div class="name">Become the next ketchup guy</div><div class="meta">Lifetime earnings '+money(S.earned)+' of $1.00M</div><div class="flav">Packets invented: '+novelCount()+' of '+(P.length-4)+'. Hit packets: '+Object.keys(S.hits).length+'.</div></div>';
+  h+='<h3>The dream</h3><div class="card"><div class="name">Next: '+mileName(S.mile||0)+'</div><div class="meta">Lifetime earnings '+money(S.earned)+' of '+money(mileAt(S.mile||0))+'</div><div class="flav">Packets invented: '+novelCount()+' of '+(P.length-4)+'. Hit packets: '+Object.keys(S.hits).length+'.</div></div>';
   h+='<div class="btns"><button class="act" data-do="reset()">Start Over</button></div>';
  }
  $('main').innerHTML=h;drawGraphs();
@@ -327,9 +336,10 @@ function tick(dt){
  let gain=0;
  ownedList().forEach(p=>{const n=(S.lines[p.id]||0)*lineRate()*dt;const c=n*costOf(p);if(S.cash>=c){S.cash-=c;gain-=c;S.stock[p.id]=(S.stock[p.id]||0)+n;madeAcc+=n;pa(p.id).m+=n;pa(p.id).c+=c}
   const cap=(p.tier===0?14:1.5)*dt*demOf(p);const sold=Math.min(S.stock[p.id]||0,cap);S.stock[p.id]-=sold;soldAcc+=sold;const r=sold*priceOf(p);pa(p.id).r+=r;S.cash+=r;gain+=r;S.earned+=r});
- if(galleryOpen()){cAcc+=custRate()*dt;while(cAcc>=1){cAcc-=1;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1);if(!shelf.length)break;let want=10+Math.floor(Math.random()*31),got=0;
-  for(let i=0;i<want;i++){const p=shelf[Math.floor(Math.random()*shelf.length)];if(S.stock[p.id]>=1){S.stock[p.id]-=1;got++;pa(p.id).r+=S.flat}}
-  soldAcc+=got;const r=got*S.flat;S.cash+=r;gain+=r;S.earned+=r;S.fame+=got*0.002}}
+ if(galleryOpen()){cAcc+=custRate()*dt;const cust=Math.floor(cAcc);if(cust>=1){cAcc-=cust;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1);
+  if(shelf.length){let want=cust<=20?Array.from({length:cust},()=>10+Math.floor(Math.random()*31)).reduce((a,b)=>a+b,0):cust*25,got=0;
+   const per=want/shelf.length;shelf.forEach(p=>{const take=Math.min(S.stock[p.id],per);S.stock[p.id]-=take;got+=take;pa(p.id).r+=take*S.flat});
+   soldAcc+=got;const r=got*S.flat;S.cash+=r;gain+=r;S.earned+=r;S.fame+=got*0.002}}}
  const roy=royalty()*dt;S.cash+=roy;gain+=roy;S.earned+=roy;
  S.events=(S.events||[]).filter(e=>{e.left-=dt;if(e.left<=0){say(e.n+' is old news. Market back to normal.');return false}return true});
  if($('evt').style.display!=='block'){S.nextEvt=(S.nextEvt==null?75:S.nextEvt)-dt;if(S.nextEvt<=0){S.nextEvt=70+Math.random()*80;fireEvent()}}
@@ -338,7 +348,7 @@ function tick(dt){
  gAcc+=dt;if(gAcc>=1){hist.push({m:madeAcc/gAcc,s:soldAcc/gAcc});for(const id in pacc){const a=pacc[id],o=pr(id);prate[id]={m:o.m*.8+a.m/gAcc*.2,p:o.p*.8+(a.r-a.c)/gAcc*.2};a.m=a.r=a.c=0}if(hist.length>120)hist.shift();madeAcc=0;soldAcc=0;gAcc=0;drawGraphs()}
  secAcc+=dt;earnSec+=gain;if(secAcc>=1){lastRate=earnSec/secAcc;secAcc=0;earnSec=0}
  hAcc+=dt;if(hAcc>22){hAcc=0;if(novelCount()>0)say(HEADS[Math.floor(Math.random()*HEADS.length)])}
- if(!S.won&&S.earned>=1e6){S.won=true;pop('YOU ARE THE KETCHUP GUY NOW','One million dollars from packets that never should have existed. Keep inventing.')}
+ S.mile=S.mile||(S.won?1:0);if(S.earned>=mileAt(S.mile)){const m=mileName(S.mile);S.mile++;S.won=true;pop(m.toUpperCase(),'Lifetime earnings passed '+money(mileAt(S.mile-1))+'. Next goal: '+money(mileAt(S.mile))+'. Keep squeezing.')}
 }
 
 const FH=56,ROOF=70,GROUND=78,LABW=92,FULL=12;
@@ -347,7 +357,7 @@ function towerTap(e){e.preventDefault();lastTap={x:e.clientX,y:e.clientY};const 
  const fl=towerFloors(),H=ROOF+fl.length*FH+GROUND,i=Math.floor((H-GROUND-y)/FH);if(i>=0&&i<fl.length)squeeze(fl[i].id)}
 function zig(x,a,b,w,h,c){const z=3,t=6,st=w/t;x.beginPath();x.moveTo(a,b+z);for(let i=0;i<t;i++){x.lineTo(a+i*st+st/2,b);x.lineTo(a+(i+1)*st,b+z)}x.lineTo(a+w,b+h-z);for(let i=t;i>0;i--){x.lineTo(a+i*st-st/2,b+h);x.lineTo(a+(i-1)*st,b+h-z)}x.closePath();x.fillStyle=c;x.fill();x.strokeStyle='rgba(0,0,0,.28)';x.lineWidth=1;x.stroke()}
 function rr(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
-function drawTower(t){const c=$('tw');if(!c)return;const fl=towerFloors(),W=c.clientWidth,H=ROOF+fl.length*FH+GROUND,dpr=window.devicePixelRatio||1;
+function drawTower(t){const c=$('tw');if(!c)return;const fl=towerFloors(),W=c.clientWidth,H=ROOF+fl.length*FH+GROUND,dpr=Math.min(2,window.devicePixelRatio||1);
  if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);c.style.height=H+'px'}
  const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,W,H);
  const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#cfe8ff');g.addColorStop(1,'#fff6e6');x.fillStyle=g;x.fillRect(0,0,W,H);
