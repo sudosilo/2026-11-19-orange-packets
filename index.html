@@ -488,7 +488,6 @@ function draw(){
  if(tab==='lab'){
   if(S.rd){const p=byId(S.rd.id);h+='<div class="card slot"><div class="row">'+pk(p.c,false,p.e,p.short||p.n)+'<div class="grow"><div class="name">Researching '+p.n+'</div><div class="meta">'+Math.ceil(S.rd.left)+'s left</div><div class="bar"><i style="width:'+(100-S.rd.left/S.rd.tot*100)+'%"></i></div></div></div></div>'}
   else h+='<div class="card slot"><div class="name">Lab is idle</div><div class="meta">Pick a packet below to invent.</div><div class="bar"><i></i></div></div>';
-  if(mixOpen()){const MR=S.mixRd;h+='<div class="card slot"><div class="name">'+(MR?'50/50 Lab: Half '+byId(MR.a).n+' Half '+byId(MR.b).n:'50/50 Lab is idle')+'</div><div class="meta">'+(MR?Math.ceil(MR.left)+'s left':'Spin the 50/50 Machine to research a new flavor.')+'</div><div class="bar"><i style="width:'+(MR?(100-MR.left/MR.tot*100):0)+'%"></i></div></div>'}
   h+='<h3>Next big packet</h3>';
   const avail=P.filter(p=>p.tier>0&&!S.owned[p.id]);
   avail.slice(0,5).forEach(p=>{const ok=!p.req||p.req.every(r=>S.owned[r]);
