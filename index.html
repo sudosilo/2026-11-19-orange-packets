@@ -17,7 +17,7 @@ header{position:sticky;top:0;z-index:5;height:86px;overflow:hidden;background:va
 .goal{height:6px;background:var(--line);border-radius:4px;margin-top:6px;overflow:hidden}
 .goal i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--yellow));width:0}
 nav{display:flex;gap:6px;padding:8px 10px;background:var(--bg);position:sticky;top:86px;z-index:4;overflow-x:auto}
-nav button{flex:1;min-width:76px;padding:9px 6px;border:2px solid var(--line);background:var(--card);border-radius:10px;font-weight:700;color:var(--ink);font-size:13px}
+nav button{flex:1;min-width:62px;padding:9px 6px;border:2px solid var(--line);background:var(--card);border-radius:10px;font-weight:700;color:var(--ink);font-size:13px}
 nav button.on{border-color:var(--red);color:var(--red)}
 nav button.lock{opacity:.4}
 main{padding:6px 10px 120px}
@@ -42,6 +42,8 @@ button.act:disabled{background:#cfc6bb}
 .tag.hit{background:#ffe0d9;color:var(--red)}
 h3{margin:14px 4px 4px;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
 .flav{font-size:13px;color:var(--muted);font-style:italic;margin-top:4px}
+#tw{display:block;width:100%;border:2px solid var(--line);border-radius:14px;background:#eaf4ff;touch-action:manipulation}
+.twhint{color:var(--muted);font-size:12px;text-align:center;height:16px;margin:4px 0}
 #ticker{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:2px solid var(--line);padding:8px 12px;font-size:13px;max-height:96px;overflow:hidden;z-index:6}
 #ticker div{padding:2px 0;color:var(--muted)}
 #ticker div:first-child{color:var(--ink);font-weight:600}
@@ -77,6 +79,7 @@ input[type=range]{width:100%}
 </header>
 <nav>
   <button data-t="factory" class="on">Factory</button>
+  <button data-t="tower">Tower</button>
   <button data-t="lab">R and D</button>
   <button data-t="gallery" id="galTab" class="lock">Gallery</button>
   <button data-t="office">Office</button>
@@ -255,6 +258,7 @@ function draw(){
  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
  $('galTab').classList.toggle('lock',!galleryOpen());
  let h='';
+ if(tab==='tower'){if(!$('tw')){$('main').innerHTML='<div class="twhint">Tap a floor to squeeze. Each line widens the floor. 12 lines fills it.</div><canvas id="tw"></canvas>';$('tw').addEventListener('pointerdown',towerTap)}return}
  if(tab==='factory'){
   h+='<div class="card slot"><div class="name">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind. Run campaigns in the Office.</div></div>';
   h+='<h3>Your packets</h3>';
@@ -312,8 +316,54 @@ function tick(dt){
  hAcc+=dt;if(hAcc>22){hAcc=0;if(novelCount()>0)say(HEADS[Math.floor(Math.random()*HEADS.length)])}
  if(!S.won&&S.earned>=1e6){S.won=true;pop('YOU ARE THE KETCHUP GUY NOW','One million dollars from packets that never should have existed. Keep inventing.')}
 }
+
+const FH=56,ROOF=70,GROUND=78,LABW=92,FULL=12;
+function towerFloors(){return ownedList()}
+function towerTap(e){e.preventDefault();lastTap={x:e.clientX,y:e.clientY};const c=$('tw'),r=c.getBoundingClientRect(),y=e.clientY-r.top;
+ const fl=towerFloors(),H=ROOF+fl.length*FH+GROUND,i=Math.floor((H-GROUND-y)/FH);if(i>=0&&i<fl.length)squeeze(fl[i].id)}
+function rr(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
+function drawTower(t){const c=$('tw');if(!c)return;const fl=towerFloors(),W=c.clientWidth,H=ROOF+fl.length*FH+GROUND,dpr=window.devicePixelRatio||1;
+ if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);c.style.height=H+'px'}
+ const x=c.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,W,H);
+ const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'#cfe8ff');g.addColorStop(1,'#fff6e6');x.fillStyle=g;x.fillRect(0,0,W,H);
+ const bx=10,bw=W-20,sec=t/1000;
+ // roof
+ x.fillStyle='#d8432b';x.beginPath();x.moveTo(bx-4,ROOF);x.lineTo(bx+bw/2,ROOF-34);x.lineTo(bx+bw+4,ROOF);x.closePath();x.fill();
+ x.fillStyle='#fff';rr(x,bx+bw/2-78,ROOF-30,156,22,6);x.fill();x.fillStyle='#d8432b';x.font='800 13px system-ui';x.textAlign='center';x.textBaseline='middle';x.fillText('PACKET BARON TOWER',bx+bw/2,ROOF-19);
+ fl.forEach((p,i)=>{const y=H-GROUND-(i+1)*FH,lines=S.lines[p.id]||0,glit=isGlit(p.id);
+  x.fillStyle=i%2?'#fbf5ea':'#f4ecdd';x.fillRect(bx,y,bw,FH);x.strokeStyle=glit?'#ffd700':'#d9ccb6';x.lineWidth=glit?3:1.5;x.strokeRect(bx,y,bw,FH);
+  // label
+  x.fillStyle=p.c;rr(x,bx+6,y+8,30,24,6);x.fill();x.strokeStyle='rgba(0,0,0,.2)';x.lineWidth=1;x.stroke();
+  x.font='15px system-ui';x.textAlign='center';x.fillText(p.e||'',bx+21,y+21);
+  x.fillStyle='#2b2420';x.font='700 10px system-ui';x.textAlign='left';const nm=p.n.length>13?p.n.slice(0,12)+'.':p.n;x.fillText(nm,bx+4,y+44);
+  // room
+  const rx=bx+LABW,rw=bw-LABW-6,built=Math.max(.14,Math.min(1,lines/FULL))*rw;
+  x.setLineDash([4,4]);x.strokeStyle='#cbbfa9';x.strokeRect(rx,y+6,rw,FH-12);x.setLineDash([]);
+  x.fillStyle='#ffffff';x.fillRect(rx,y+6,built,FH-12);x.strokeStyle='#bfae92';x.strokeRect(rx,y+6,built,FH-12);
+  // conveyor
+  const cy=y+FH-15;x.fillStyle='#6b6258';x.fillRect(rx+2,cy,built-4,4);
+  for(let k=0;k<built-4;k+=10){x.fillStyle='#9a9087';x.fillRect(rx+2+((k+sec*30)%(built-4)),cy+1,2,2)}
+  // machines
+  const nm2=Math.min(lines,FULL);if(nm2===0){x.font='16px system-ui';x.textAlign='center';x.fillText('✋',rx+built/2,y+24)}
+  for(let m=0;m<nm2;m++){const mx=rx+6+m*(rw/FULL);x.fillStyle=p.c;rr(x,mx,y+10,rw/FULL-8,16,4);x.fill();x.strokeStyle='rgba(0,0,0,.25)';x.stroke();
+   x.fillStyle=Math.sin(sec*6+m)>0?'#2f9e5b':'#d8432b';x.beginPath();x.arc(mx+5,y+15,2.5,0,7);x.fill()}
+  // moving packets
+  const n=Math.min(24,lines*2+(S.stock[p.id]>0?1:0)),sp=20+lineRate()*6;
+  for(let k=0;k<n;k++){const px=rx+4+((sec*sp+k*(built/Math.max(1,n)))%(built-16));x.fillStyle=p.c;rr(x,px,cy-9,12,9,2);x.fill();x.strokeStyle='rgba(0,0,0,.3)';x.lineWidth=.8;x.stroke()}
+  // stock and tags
+  x.fillStyle='#2b2420';x.font='700 10px system-ui';x.textAlign='left';x.fillText(num(S.stock[p.id]||0),bx+40,y+15);x.fillStyle='#7a6e66';x.fillText(lines+' lines',bx+40,y+28);
+  if(evOn(p.id)||S.hits[p.id]){x.font='800 9px system-ui';x.textAlign='right';x.fillStyle=evOn(p.id)?'#2d6cdf':'#d8432b';x.fillText(evOn(p.id)?'NEWS':'HIT',rx+rw-3,y+FH-3)}
+ });
+ // ground
+ const gy=H-GROUND;x.fillStyle='#e8d8bd';x.fillRect(bx,gy,bw,GROUND-18);x.strokeStyle='#bfae92';x.strokeRect(bx,gy,bw,GROUND-18);
+ x.fillStyle='#7cb65a';x.fillRect(0,H-18,W,18);
+ const open=galleryOpen();x.fillStyle=open?'#d8432b':'#7a6e66';rr(x,bx+bw/2-80,gy+8,160,20,5);x.fill();
+ x.fillStyle='#fff';x.font='800 11px system-ui';x.textAlign='center';x.fillText(open?'PACKET GALLERY':'LOADING DOCK',bx+bw/2,gy+18);
+ x.fillStyle='#8fc1ec';x.fillRect(bx+bw/2-18,gy+32,36,GROUND-50);x.fillStyle='#cfe6fa';x.fillRect(bx+14,gy+34,46,22);x.fillRect(bx+bw-60,gy+34,46,22);
+ if(open){const cr=Math.min(6,Math.ceil(custRate()));for(let k=0;k<cr;k++){const px=(sec*40+k*70)%(bw)+bx;x.font='14px system-ui';x.fillText('🧍',px,H-26)}}
+}
 let last=performance.now(),dAcc=0,sAcc=0;
-function loop(now){const dt=Math.min(1,(now-last)/1000);last=now;tick(dt);dAcc+=dt;sAcc+=dt;
+function loop(now){const dt=Math.min(1,(now-last)/1000);last=now;tick(dt);if(tab==='tower')drawTower(now);dAcc+=dt;sAcc+=dt;
  if(dAcc>.5){dAcc=0;const ae=document.activeElement;if(!(ae&&ae.type==='range'))draw();else{$('cash').textContent=money(S.cash)}}
  if(sAcc>5){sAcc=0;save()}requestAnimationFrame(loop)}
 say('You make ketchup, mustard, mayo and soy sauce. The margins are terrible.');
