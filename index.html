@@ -331,6 +331,9 @@ const EVENTS=[
  {n:'Packet Frenzy',b:'Everybody suddenly wants {x}. Prices tripled. Anyone holding stock cleans up.',rand:1,price:3,dem:3},
  {n:'Collector Craze',b:'Collectors are hoarding {x}. Big prices for anyone with stock on hand.',rand:2,price:2.5,dem:2},
  {n:'Trucker Strike',b:'Wholesale truckers walked off the job. Every packet ships at a crawl.',all:1,dem:.25},
+ {n:'Hot Dog Day',b:'Grills fire up across the country. Ketchup and mustard fly off the shelves.',ids:['ketchup','mustard'],cost:1,price:2,dem:3},
+ {n:'Fry Day',b:'Every fry in the nation needs a dip today.',ids:['ketchup','mayo','ranch'],cost:1,price:1.8,dem:3},
+ {n:'Sushi Week',b:'Raw fish is trending. Soy sauce is suddenly cool.',ids:['soy'],cost:1,price:2,dem:3},
  {n:'Ketchup Recall Panic',b:'A rival ketchup recall sends shoppers running to your ketchup.',ids:['ketchup'],cost:1,price:1.3,dem:4}
 ];
 const MILES=['You are the ketchup guy now','Condiment Billionaire','Sauce Sovereign','Packet Emperor','Galactic Squeezer','Multiversal Mustard Lord','Ruler of All Packets'];
@@ -407,11 +410,14 @@ function costOf(p){const l=lvl(p.id);return p.cost*evFx(p.id,'cost')*(l?STYLES[l
 const MKS=[.5,.75,1,1.25,1.5,2,2.5,3,4,5,7,10,15,25,50,100],MKD=2,ELAS=1.5;
 function mkI(id){const v=S.mk&&S.mk[id];return v==null?MKD:v}
 function mkOf(id){return MKS[mkI(id)]}
-function mkDem(id){return Math.pow(mkOf(id),-ELAS)}
+const ELT=[3.5,2.6,2.1,1.7,1.4];
+function elasOf(p){return ELT[Math.min(4,p.tier||0)]*(1-0.05*lvl(p.id))}
+function stylePm(p,sm){const lo=sm.cm*1.5,t=p.tier||0,out=(S.lines[p.id]||0)*lineRate(),K=1000*(1+t)*(1+t);return lo+(sm.pm-lo)/(1+out/K)}
+function mkDem(id){return Math.pow(mkOf(id),-elasOf(byId(id)))}
 function mkAdj(id,d){S.mk=S.mk||{};S.mk[id]=Math.max(0,Math.min(MKS.length-1,mkI(id)+d));draw()}
 function mkAll(d){S.mk=S.mk||{};ownedList().forEach(p=>{S.mk[p.id]=Math.max(0,Math.min(MKS.length-1,mkI(p.id)+d))});fSig='';say('All prices set '+(d>0?'up':'down')+' one step.');draw()}
 function mkTxt(id){const m=mkOf(id);return 'Price x'+(m<1?m.toFixed(2):m)+' . buyers x'+big(mkDem(id),2)}
-function priceOf(p){const l=lvl(p.id);return p.price*evFx(p.id,'price')*(l?STYLES[l].pm:1)*mkOf(p.id)}
+function priceOf(p){const l=lvl(p.id);return p.price*evFx(p.id,'price')*(l?stylePm(p,STYLES[l]):1)*mkOf(p.id)}
 function glitCost(p){return Math.round(30+(p.rd||10)*0.6)}
 function styleCost(p,nx){return glitCost(p)*Math.pow(6,nx-1)}
 function ascend(id){const p=byId(id),nx=lvl(id)+1;if(nx>=STYLES.length)return;const st=STYLES[nx],c=styleCost(p,nx);if((S.lines[id]||0)<st.req||S.cash<c)return;S.cash-=c;S.style[id]=nx;S.fame+=3*nx;say(p.n+' powers up to '+st.n+' Edition!');draw()}
@@ -551,7 +557,7 @@ function tick(dt){
  const OL=ownedList();for(let i=0;i<OL.length;i++){const p=OL[i],id=p.id,ln=S.lines[id]||0,stk=S.stock[id]||0;if(!ln&&stk<=0)continue;
   const l=ST[id]||0,sm=l?STYLES[l]:null,ec=EV?evFx(id,'cost'):1,ep=EV?evFx(id,'price'):1,ed=EV?evFx(id,'dem'):1;
   let st=stk;if(ln&&MD[id]!==2&&!(MD[id]==null&&PS[id])){const n=ln*LRt,c=n*p.cost*ec*(sm?sm.cm:1);if(S.cash>=c){S.cash-=c;gain-=c;st+=n;madeAcc+=n;const A=pa(id);A.m+=n;A.c+=c}}
-  if(st>0&&MD[id]!==1){const mk=MKS[MK[id]==null?MKD:MK[id]],cap=((p.tier===0?14:1.5)*DM+ln*LRt*0.9*DM/dt)*ed*Math.pow(mk,-ELAS),sold=Math.min(st,cap);st-=sold;soldAcc+=sold;const r=sold*p.price*ep*(sm?sm.pm:1)*mk;pa(id).r+=r;S.cash+=r;gain+=r;S.earned+=r}
+  if(st>0&&MD[id]!==1){const mk=MKS[MK[id]==null?MKD:MK[id]],cap=((p.tier===0?14:1.5)*DM+ln*LRt*0.9*DM/dt)*ed*Math.pow(mk,-elasOf(p)),sold=Math.min(st,cap);st-=sold;soldAcc+=sold;const r=sold*p.price*ep*(sm?stylePm(p,sm):1)*mk;pa(id).r+=r;S.cash+=r;gain+=r;S.earned+=r}
   S.stock[id]=st}}
  if(galleryOpen()){cAcc+=custRate()*dt;const cust=Math.floor(cAcc);if(cust>=1){cAcc-=cust;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1&&!isHeld(p.id));
   if(shelf.length){let want=cust<=20?Array.from({length:cust},()=>10+Math.floor(Math.random()*31)).reduce((a,b)=>a+b,0):cust*25,got=0;
