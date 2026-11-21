@@ -343,15 +343,16 @@ function spinCost(){return 250*Math.pow(1.6,S.spins||0)}
 let spinning=false,mixSig='';
 function pairKey(a,b){return a<b?a+'~'+b:b+'~'+a}
 function madePairs(){const m=new Set();(S.combos||[]).forEach(c=>m.add(pairKey(c.a,c.b)));return m}
-function pickPair(pool){const m=madePairs();for(let i=0;i<300;i++){const A=pool[Math.floor(Math.random()*pool.length)],B=pool[Math.floor(Math.random()*pool.length)];if(A!==B&&!m.has(pairKey(A.id,B.id)))return [A,B]}
+function pickPair(pool){const m=madePairs();if(S.mixRd)m.add(pairKey(S.mixRd.a,S.mixRd.b));for(let i=0;i<300;i++){const A=pool[Math.floor(Math.random()*pool.length)],B=pool[Math.floor(Math.random()*pool.length)];if(A!==B&&!m.has(pairKey(A.id,B.id)))return [A,B]}
  const free=[];for(let i=0;i<pool.length;i++)for(let j=i+1;j<pool.length;j++)if(!m.has(pairKey(pool[i].id,pool[j].id)))free.push([pool[i],pool[j]]);return free.length?free[Math.floor(Math.random()*free.length)]:null}
 function pairsTotal(n){return n*(n-1)/2}
-function spinMix(){const c=spinCost();if(spinning||S.cash<c||!mixOpen())return;const pool=ownedList().filter(p=>!p.combo);if(pool.length<2)return;if(!pickPair(pool)){say('Every possible flavor from your current packets is already made. Invent more packets.');return}S.cash-=c;S.spins=(S.spins||0)+1;spinning=true;mixSig='';
+function spinMix(){const c=spinCost();if(spinning||S.mixRd||S.cash<c||!mixOpen())return;const pool=ownedList().filter(p=>!p.combo);if(pool.length<2)return;if(!pickPair(pool)){say('Every possible flavor from your current packets is already made. Invent more packets.');return}S.cash-=c;S.spins=(S.spins||0)+1;spinning=true;mixSig='';
  const pair=pickPair(pool);if(!pair){say('The 50/50 Machine has made every possible flavor from your packets. Invent more packets to unlock more.');return}const [A,B]=pair;
  const st=0,iv=setInterval(()=>{const r1=$('r1'),r2=$('r2');const q=pool[Math.floor(Math.random()*pool.length)],w=pool[Math.floor(Math.random()*pool.length)];if(r1)r1.innerHTML=pk(q.c,0,q.e,q.n);if(r2)r2.innerHTML=pk(w.c,0,w.e,w.n)},90);
- setTimeout(()=>{clearInterval(iv);S.combos=S.combos||[];S.cid=(S.cid||0)+1;const id='x'+S.cid,co={id,a:A.id,b:B.id,base:c};S.combos.push(co);const o=comboObj(co);P.push(o);
-  S.owned[id]=1;bumpOwned();S.lines[id]=0;S.stock[id]=0;S.style=S.style||{};S.style[id]=st;spinning=false;mixSig='';fSig='';S.fame+=5*(st+1);
-  S.lastMix=id;say('New flavor from the 50/50 Machine: '+o.n+'. New floor added.');draw()},1300)}
+ setTimeout(()=>{clearInterval(iv);const t=Math.max(15,Math.round(((A.t||20)+(B.t||20))/2));S.mixRd={a:A.id,b:B.id,base:c,left:t,tot:t};spinning=false;mixSig='';
+  say('50/50 Lab starts researching Half '+A.n+' Half '+B.n+'. '+t+'s.');draw()},1300)}
+function finishMix(){const m=S.mixRd;S.mixRd=null;const A=byId(m.a),B=byId(m.b);if(!A||!B)return;S.combos=S.combos||[];S.cid=(S.cid||0)+1;const id='x'+S.cid,co={id,a:m.a,b:m.b,base:m.base};S.combos.push(co);const o=comboObj(co);P.push(o);
+ S.owned[id]=1;bumpOwned();S.lines[id]=0;S.stock[id]=0;S.style=S.style||{};S.style[id]=0;mixSig='';fSig='';twSig='';S.fame+=5;S.lastMix=id;say('50/50 Lab finished: '+o.n+'. New floor added.')}
 function mixCard(p){const l=lvl(p.id),nx=STYLES[l+1];return '<div class="card"><div class="row">'+pk(p.c,l,p.e,p.short)+'<div class="grow"><div class="name">'+p.n+'</div><div class="meta">'+(l?STYLES[l].n:'Standard')+' . Lines '+num(S.lines[p.id]||0)+' . Stock '+num(S.stock[p.id]||0)+'</div><div class="meta2">'+(nx?'Next: '+nx.n+(nx.req?' at '+nx.req+' lines':' available now'):'Max style')+'</div></div></div></div>'}
 const SUF=['','K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc'];
 function big(v,dec){if(!isFinite(v))return 'MAX';const a=Math.abs(v);if(a<1e4)return v.toFixed(dec);let e=Math.floor(Math.log10(a)/3);if(+(a/Math.pow(1000,e)).toFixed(2)>=1000)e++;if(e<SUF.length)return (v/Math.pow(1000,e)).toFixed(2)+SUF[e];return v.toExponential(2).replace('e+','e')}
@@ -471,14 +472,14 @@ function draw(){
   h+='<div class="flav" style="padding:4px">Wholesale buyers take staples fast and novelties slowly. Margins are thin. That is the whole point.</div>';
  }
  if(tab==='mix'){
-  const CS=S.combos||[],sig=CS.length+'|'+(CS.length?CS[CS.length-1].id:'')+'|'+CS.slice(-30).map(c=>lvl(c.id)).join('')+spinning;
-  if(sig===mixSig&&$('mixm')){const b=$('spinb');if(b){b.disabled=spinning||S.cash<spinCost();b.textContent='Spin '+money(spinCost())}return}
-  mixSig=sig;const last=S.lastMix&&byId(S.lastMix);
+  const CS=S.combos||[],sig=CS.length+'|'+(CS.length?CS[CS.length-1].id:'')+'|'+CS.slice(-30).map(c=>lvl(c.id)).join('')+spinning+'|'+(S.mixRd?S.mixRd.a+S.mixRd.b:'');
+  if(sig===mixSig&&$('mixm')){const b=$('spinb');if(b){b.disabled=spinning||!!S.mixRd||S.cash<spinCost();b.textContent=S.mixRd?'Researching '+Math.ceil(S.mixRd.left)+'s':'Spin '+money(spinCost())}const mb=$('mixbar');if(mb&&S.mixRd)mb.style.width=(100-S.mixRd.left/S.mixRd.tot*100)+'%';return}
+  mixSig=sig;const MR=S.mixRd,last=MR?{a:MR.a,b:MR.b,c:byId(MR.a).c+'|'+byId(MR.b).c,e:byId(MR.a).e+byId(MR.b).e,short:byId(MR.a).n+' + '+byId(MR.b).n,n:'Half '+byId(MR.a).n+' Half '+byId(MR.b).n,id:'_mr'}:(S.lastMix&&byId(S.lastMix));
   h+='<div class="card" id="mixm" style="height:236px;text-align:center"><div class="name">The 50/50 Machine</div><div class="meta">Two packets in, one brand new flavor out.</div>'+
    '<div class="row" style="justify-content:center;gap:8px;height:70px;margin-top:8px"><div id="r1">'+(last?pk(byId(last.a).c,0,byId(last.a).e,byId(last.a).n):pk('#dddddd',0,'?','???'))+'</div><div class="big">+</div><div id="r2">'+(last?pk(byId(last.b).c,0,byId(last.b).e,byId(last.b).n):pk('#dddddd',0,'?','???'))+'</div><div class="big">=</div><div>'+(last?pk(last.c,lvl(last.id),last.e,last.short):pk('#dddddd',0,'?','???'))+'</div></div>'+
-   '<div class="meta" style="margin-top:4px">'+(last?(lvl(last.id)?STYLES[lvl(last.id)].n+' ':'')+last.n:'Spin to make your first 50/50')+'</div>'+
-   '<div class="meta">Each new flavor is a new floor. Build lines and power it up like any packet.</div>'+
-   '<div class="btns"><button class="act" id="spinb" '+(spinning||S.cash<spinCost()?'disabled':'')+' data-do="spinMix()">'+(spinning?'Spinning...':'Spin '+money(spinCost()))+'</button></div></div>';
+   '<div class="meta" style="margin-top:4px">'+(MR?'Researching: ':'')+(last?last.n:'Spin to make your first 50/50')+'</div>'+
+   '<div class="bar" style="margin:4px 0"><i id="mixbar" style="width:'+(MR?(100-MR.left/MR.tot*100):0)+'%"></i></div>'+
+   '<div class="btns"><button class="act" id="spinb" '+(spinning||MR||S.cash<spinCost()?'disabled':'')+' data-do="spinMix()">'+(spinning?'Spinning...':MR?'Researching '+Math.ceil(MR.left)+'s':'Spin '+money(spinCost()))+'</button></div></div>';
   {const own=ownedList().filter(p=>!p.combo).length,all=P.filter(p=>!p.combo).length;h+='<div class="card"><div class="name">Flavors made '+num((S.combos||[]).length)+'</div><div class="meta">Possible with your '+own+' packets: '+num(pairsTotal(own))+'</div><div class="meta">Possible with all '+all+' packets: '+pairsTotal(all).toLocaleString()+'</div></div>'}
   h+='<h3>Newest 50/50 flavors ('+(S.combos||[]).length+')</h3>';
   (S.combos||[]).slice(-30).reverse().forEach(c=>{const p=byId(c.id);if(p)h+=mixCard(p)});if((S.combos||[]).length>30)h+='<div class="flav" style="padding:4px">Showing the newest 30. Every mix lives in the Factory and Tower under both of its ingredients.</div>';
@@ -487,6 +488,7 @@ function draw(){
  if(tab==='lab'){
   if(S.rd){const p=byId(S.rd.id);h+='<div class="card slot"><div class="row">'+pk(p.c,false,p.e,p.short||p.n)+'<div class="grow"><div class="name">Researching '+p.n+'</div><div class="meta">'+Math.ceil(S.rd.left)+'s left</div><div class="bar"><i style="width:'+(100-S.rd.left/S.rd.tot*100)+'%"></i></div></div></div></div>'}
   else h+='<div class="card slot"><div class="name">Lab is idle</div><div class="meta">Pick a packet below to invent.</div><div class="bar"><i></i></div></div>';
+  if(mixOpen()){const MR=S.mixRd;h+='<div class="card slot"><div class="name">'+(MR?'50/50 Lab: Half '+byId(MR.a).n+' Half '+byId(MR.b).n:'50/50 Lab is idle')+'</div><div class="meta">'+(MR?Math.ceil(MR.left)+'s left':'Spin the 50/50 Machine to research a new flavor.')+'</div><div class="bar"><i style="width:'+(MR?(100-MR.left/MR.tot*100):0)+'%"></i></div></div>'}
   h+='<h3>Next big packet</h3>';
   const avail=P.filter(p=>p.tier>0&&!S.owned[p.id]);
   avail.slice(0,5).forEach(p=>{const ok=!p.req||p.req.every(r=>S.owned[r]);
@@ -533,6 +535,7 @@ function tick(dt){
  S.events=(S.events||[]).filter(e=>{e.left-=dt;if(e.left<=0){say(e.n+' is old news. Market back to normal.');return false}return true});
  if($('evt').style.display!=='block'){S.nextEvt=(S.nextEvt==null?75:S.nextEvt)-dt;if(S.nextEvt<=0){S.nextEvt=70+Math.random()*80;fireEvent()}}
  if(S.camp){S.camp.left-=dt;if(S.camp.left<=0){say(S.camp.n+' wrapped up. Demand back to normal.');S.camp=null}}
+ if(S.mixRd){S.mixRd.left-=dt;if(S.mixRd.left<=0)finishMix()}
  if(S.rd){S.rd.left-=dt;if(S.rd.left<=0)finishRD()}
  gAcc+=dt;if(gAcc>=1){hist.push({m:madeAcc/gAcc,s:soldAcc/gAcc});for(const id in pacc){const a=pacc[id],o=pr(id);prate[id]={m:o.m*.8+a.m/gAcc*.2,p:o.p*.8+(a.r-a.c)/gAcc*.2};a.m=a.r=a.c=0}if(hist.length>120)hist.shift();madeAcc=0;soldAcc=0;gAcc=0;drawGraphs()}
  secAcc+=dt;earnSec+=gain;if(secAcc>=1){lastRate=earnSec/secAcc;secAcc=0;earnSec=0}
