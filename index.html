@@ -317,24 +317,19 @@ function save(){try{localStorage.setItem('packetbaron1',JSON.stringify(S))}catch
 load();
 const $=id=>document.getElementById(id);
 const byId=id=>P.find(p=>p.id===id);
-const MIXN=20,SODDS=[60,22,10,5,2,.8,.2],SMULT=[.4,1.2,2.5,6,15,45,180],RAR=['Common','Uncommon','Rare','Super Rare','Ultra Rare','Mythic','Legendary'];
+const MIXN=20;
 function mixOpen(){return novelCount()>=MIXN}
 function comboObj(c){const A=byId(c.a),B=byId(c.b);return {id:c.id,combo:1,a:c.a,b:c.b,n:'Half '+A.n+' Half '+B.n,short:A.n+' + '+B.n,e:A.e+B.e,c:A.c+'|'+B.c,cost:+((A.cost+B.cost)/2).toFixed(4),price:+((A.price+B.price)/2*1.6).toFixed(4),tier:Math.max(A.tier,B.tier,1),f:'Two packets enter. One packet leaves.'}}
 (S.combos||[]).forEach(c=>{if(byId(c.a)&&byId(c.b)&&!byId(c.id))P.push(comboObj(c))});
 function spinCost(){return 250*Math.pow(1.6,S.spins||0)}
-function comboVal(id){const c=(S.combos||[]).find(x=>x.id===id);if(!c)return 0;const A=byId(c.a),B=byId(c.b);return c.base*SMULT[lvl(id)]*(Math.abs(A.tier-B.tier)>=5?2:1)}
-function rarityOf(id){const c=(S.combos||[]).find(x=>x.id===id),A=byId(c.a),B=byId(c.b);return RAR[Math.min(6,lvl(id)+(Math.abs(A.tier-B.tier)>=5?1:0))]}
 let spinning=false,mixSig='';
-function rollStyle(){let r=Math.random()*100;for(let i=0;i<SODDS.length;i++){if(r<SODDS[i])return i;r-=SODDS[i]}return 0}
 function spinMix(){const c=spinCost();if(spinning||S.cash<c||!mixOpen())return;const pool=ownedList().filter(p=>!p.combo);if(pool.length<2)return;S.cash-=c;S.spins=(S.spins||0)+1;spinning=true;mixSig='';
  let A,B,tries=0;do{A=pool[Math.floor(Math.random()*pool.length)];B=pool[Math.floor(Math.random()*pool.length)];tries++}while((A===B||(S.combos||[]).some(x=>x.a===A.id&&x.b===B.id))&&tries<50);
- const st=rollStyle(),iv=setInterval(()=>{const r1=$('r1'),r2=$('r2');const q=pool[Math.floor(Math.random()*pool.length)],w=pool[Math.floor(Math.random()*pool.length)];if(r1)r1.innerHTML=pk(q.c,0,q.e,q.n);if(r2)r2.innerHTML=pk(w.c,0,w.e,w.n)},90);
+ const st=0,iv=setInterval(()=>{const r1=$('r1'),r2=$('r2');const q=pool[Math.floor(Math.random()*pool.length)],w=pool[Math.floor(Math.random()*pool.length)];if(r1)r1.innerHTML=pk(q.c,0,q.e,q.n);if(r2)r2.innerHTML=pk(w.c,0,w.e,w.n)},90);
  setTimeout(()=>{clearInterval(iv);S.combos=S.combos||[];S.cid=(S.cid||0)+1;const id='x'+S.cid,co={id,a:A.id,b:B.id,base:c};S.combos.push(co);const o=comboObj(co);P.push(o);
   S.owned[id]=1;S.lines[id]=0;S.stock[id]=0;S.style=S.style||{};S.style[id]=st;spinning=false;mixSig='';fSig='';S.fame+=5*(st+1);
-  const rr=rarityOf(id);S.lastMix=id;say('50/50 Machine made: '+(st?STYLES[st].n+' ':'')+o.n+'. '+rr+'!');
-  if(st>=3)pop(rr.toUpperCase()+' 50/50!',STYLES[st].n+' '+o.n+'. Collectors are already calling.');draw()},1300)}
-function sellCombo(id){const v=comboVal(id);if(!v)return;S.cash+=v;S.earned+=v;const p=byId(id);S.combos=S.combos.filter(x=>x.id!==id);['owned','lines','stock'].forEach(k=>delete S[k][id]);delete S.style[id];const i=P.findIndex(x=>x.id===id);if(i>=0)P.splice(i,1);if(sortOrder)sortOrder=sortOrder.filter(x=>x!==id);mixSig='';fSig='';say('A collector paid '+money(v)+' for '+p.n+'.');draw()}
-function mixCard(p){return '<div class="card"><div class="row">'+pk(p.c,lvl(p.id),p.e,p.short)+'<div class="grow"><div class="name">'+p.n+'</div><div class="meta"><span class="tag st">'+rarityOf(p.id).toUpperCase()+'</span>'+(lvl(p.id)?' '+STYLES[lvl(p.id)].n:' Standard')+' . Lines '+num(S.lines[p.id]||0)+'</div><div class="meta2" id="mv_'+p.id+'">Collector value '+money(comboVal(p.id))+'</div></div></div><div class="btns"><button class="act ok" data-do="sellCombo(\''+p.id+'\')" id="ms_'+p.id+'">Sell to collector '+money(comboVal(p.id))+'</button></div></div>'}
+  S.lastMix=id;say('New flavor from the 50/50 Machine: '+o.n+'. New floor added.');draw()},1300)}
+function mixCard(p){const l=lvl(p.id),nx=STYLES[l+1];return '<div class="card"><div class="row">'+pk(p.c,l,p.e,p.short)+'<div class="grow"><div class="name">'+p.n+'</div><div class="meta">'+(l?STYLES[l].n:'Standard')+' . Lines '+num(S.lines[p.id]||0)+' . Stock '+num(S.stock[p.id]||0)+'</div><div class="meta2">'+(nx?'Next: '+nx.n+(nx.req?' at '+nx.req+' lines':' available now'):'Max style')+'</div></div></div></div>'}
 const SUF=['','K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc'];
 function big(v,dec){if(!isFinite(v))return 'MAX';const a=Math.abs(v);if(a<1e4)return v.toFixed(dec);let e=Math.floor(Math.log10(a)/3);if(+(a/Math.pow(1000,e)).toFixed(2)>=1000)e++;if(e<SUF.length)return (v/Math.pow(1000,e)).toFixed(2)+SUF[e];return v.toExponential(2).replace('e+','e')}
 function money(v){return (v<0?'-$':'$')+big(Math.abs(v),2)}
@@ -363,7 +358,7 @@ function finishRD(){const p=byId(S.rd.id);S.owned[p.id]=1;S.lines[p.id]=0;S.stoc
  if(Math.random()<chance){const r=Math.round(p.tier*p.tier*4+p.tier*6);S.hits[p.id]=r;S.fame+=p.tier*15;pop('A HIT PACKET',p.n+' is the next big thing. Royalties pour in at '+money(r)+' per second.');say(p.n+' goes viral. Royalties unlocked.')}
  else say(p.n+' invented. Public response: confused.');
  if(!galleryOpen()&&novelCount()===2)say('One more invention and the Packet Gallery can open.');
- if(novelCount()===MIXN){pop('THE 50/50 MACHINE IS ONLINE','Half one packet, half another, in a random promo style. Rare ones are worth a fortune to collectors.')}
+ if(novelCount()===MIXN){pop('THE 50/50 MACHINE IS ONLINE','Spin it to invent a brand new half and half flavor. Each one becomes a new floor in your tower.')}
  if(galleryOpen()&&novelCount()===3){pop('THE PACKET GALLERY IS OPEN','Customers grab handfuls of whatever they want and pay one flat price per packet. More kinds on the shelf brings more people.');$('galTab').classList.remove('lock')}
  draw()}
 function evFx(id,k){let m=1;(S.events||[]).forEach(e=>{if(e.ids.includes(id))m*=e[k]});return m}
@@ -447,14 +442,14 @@ function draw(){
  }
  if(tab==='mix'){
   const sig=(S.combos||[]).map(c=>c.id+lvl(c.id)).join()+spinning;
-  if(sig===mixSig&&$('mixm')){const b=$('spinb');if(b){b.disabled=spinning||S.cash<spinCost();b.textContent='Spin '+money(spinCost())}(S.combos||[]).forEach(c=>{const v=money(comboVal(c.id));setH('mv_'+c.id,'Collector value '+v);setH('ms_'+c.id,'Sell to collector '+v)});return}
+  if(sig===mixSig&&$('mixm')){const b=$('spinb');if(b){b.disabled=spinning||S.cash<spinCost();b.textContent='Spin '+money(spinCost())}return}
   mixSig=sig;const last=S.lastMix&&byId(S.lastMix);
-  h+='<div class="card" id="mixm" style="height:236px;text-align:center"><div class="name">The 50/50 Machine</div><div class="meta">Half one packet, half another. Random style. Collectors pay for rare ones.</div>'+
+  h+='<div class="card" id="mixm" style="height:236px;text-align:center"><div class="name">The 50/50 Machine</div><div class="meta">Two packets in, one brand new flavor out.</div>'+
    '<div class="row" style="justify-content:center;gap:8px;height:70px;margin-top:8px"><div id="r1">'+(last?pk(byId(last.a).c,0,byId(last.a).e,byId(last.a).n):pk('#dddddd',0,'?','???'))+'</div><div class="big">+</div><div id="r2">'+(last?pk(byId(last.b).c,0,byId(last.b).e,byId(last.b).n):pk('#dddddd',0,'?','???'))+'</div><div class="big">=</div><div>'+(last?pk(last.c,lvl(last.id),last.e,last.short):pk('#dddddd',0,'?','???'))+'</div></div>'+
    '<div class="meta" style="margin-top:4px">'+(last?(lvl(last.id)?STYLES[lvl(last.id)].n+' ':'')+last.n:'Spin to make your first 50/50')+'</div>'+
-   '<div class="meta">Odds: Std 60 . Glitter 22 . Foil 10 . Holo 5 . Movie 2 . Pop .8 . Glow .2</div>'+
+   '<div class="meta">Each new flavor is a new floor. Build lines and power it up like any packet.</div>'+
    '<div class="btns"><button class="act" id="spinb" '+(spinning||S.cash<spinCost()?'disabled':'')+' data-do="spinMix()">'+(spinning?'Spinning...':'Spin '+money(spinCost()))+'</button></div></div>';
-  h+='<h3>Your 50/50 collection ('+(S.combos||[]).length+')</h3>';
+  h+='<h3>Your 50/50 flavors ('+(S.combos||[]).length+')</h3>';
   (S.combos||[]).slice().reverse().forEach(c=>{const p=byId(c.id);if(p)h+=mixCard(p)});
   if(!(S.combos||[]).length)h+='<div class="flav" style="padding:4px">Every 50/50 also joins your Factory and Tower as its own packet line.</div>';
  }
