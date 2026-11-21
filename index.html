@@ -23,8 +23,6 @@ nav button.lock{opacity:.4}
 main{padding:6px 10px 120px}
 .card{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:10px 12px;margin:8px 0}
 .row{display:flex;align-items:center;gap:10px}
-.pk{width:46px;height:36px;border-radius:9px 9px 12px 12px;flex:none;position:relative;box-shadow:inset 0 -7px 0 rgba(0,0,0,.14),inset 0 5px 0 rgba(255,255,255,.35);border:2px solid rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;overflow:hidden}
-.pk:after{content:"";position:absolute;top:3px;left:4px;right:4px;height:3px;border-top:2px dashed rgba(255,255,255,.7)}
 .name{font-weight:700}
 .meta{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:16px}
 .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:20px}
@@ -52,10 +50,12 @@ h3{margin:14px 4px 4px;font-size:14px;color:var(--muted);text-transform:uppercas
 #ticker div{padding:2px 0;color:var(--muted)}
 #ticker div:first-child{color:var(--ink);font-weight:600}
 .shelf{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.shelf .pk{width:36px;height:28px;font-size:14px}
-.fly{position:fixed;z-index:25;pointer-events:none;width:30px;height:23px;font-size:12px;animation:fly .9s ease-out forwards}
+.pk{flex:none;position:relative;line-height:0;filter:drop-shadow(0 2px 0 rgba(0,0,0,.12))}
+.pk svg{display:block}
+.fly{position:fixed;z-index:25;pointer-events:none;animation:fly .9s ease-out forwards}
 @keyframes fly{from{opacity:1;transform:translate(-50%,-50%) rotate(0)}to{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% - var(--dy))) rotate(var(--r))}}
-.bin{text-align:center;font-size:10px;color:var(--muted);width:52px}
+.bin{text-align:center;font-size:10px;color:var(--muted);width:52px;line-height:1.3}
+.bin .pk{margin:0 auto 2px;width:44px}
 input[type=range]{width:100%}
 .big{font-size:20px;font-weight:800}
 .pop{position:fixed;inset:0;background:rgba(43,36,32,.35);display:none;align-items:center;justify-content:center;z-index:20;padding:20px}
@@ -69,7 +69,8 @@ input[type=range]{width:100%}
 #evtBait{position:absolute;padding:10px 6px;border:none;border-radius:10px;font-weight:700;font-size:13px;color:#fff;background:var(--red);transform:translate(-50%,-50%);width:44%}
 .haha{position:fixed;z-index:40;font-weight:900;color:var(--red);pointer-events:none;transform:translate(-50%,-50%);animation:up 1.4s ease-out forwards;text-align:center;font-size:18px}
 @keyframes up{from{opacity:1;margin-top:0}to{opacity:0;margin-top:-90px}}
-.pk.glit{background-image:linear-gradient(115deg,rgba(255,255,255,0) 20%,rgba(255,255,255,.9) 30%,rgba(255,255,255,0) 40%,rgba(255,255,255,0) 60%,rgba(255,255,255,.8) 68%,rgba(255,255,255,0) 76%)!important;background-size:250% 100%!important;animation:shine 1.6s linear infinite;box-shadow:0 0 0 2px #ffd700,inset 0 -6px 0 rgba(0,0,0,.12)}
+.pk.glit{filter:drop-shadow(0 0 3px #ffd700) drop-shadow(0 0 1px #ffb000)}
+.pk.glit:after{content:'';position:absolute;inset:4px 2px;border-radius:3px;background:linear-gradient(115deg,rgba(255,255,255,0) 30%,rgba(255,255,255,.85) 45%,rgba(255,255,255,0) 60%);background-size:250% 100%;animation:shine 1.6s linear infinite;pointer-events:none}
 @keyframes shine{from{background-position:120% 0}to{background-position:-120% 0}}
 .tag.gl{background:#fff4b8;color:#a07800}
 .tag.evt{background:#dde9ff;color:var(--blue)}
@@ -254,8 +255,21 @@ const UP=[
 function buyUp(i){const u=UP[i],lv=u.k==='demand'?Math.round((S.demand-1)*2+1):S[u.k],c=u.c(lv);if(S.cash<c)return;S.cash-=c;if(u.k==='mkt'||u.k==='demand'){S[u.k]=Math.round((S[u.k]+0.5)*10)/10}else S[u.k]+=1;say(u.n+' purchased.');draw()}
 function setFlat(v){S.flat=parseFloat(v);$('flatv').textContent=money(S.flat);$('custv').textContent=custRate().toFixed(2)+' customers per second'}
 function reset(){if(!window.__r){window.__r=1;say('Tap Start Over again to wipe the company.');setTimeout(()=>window.__r=0,3000);return}S=fresh();save();log=[];say('A new packet empire begins.');draw()}
-function pk(c,g,e){return '<div class="pk'+(g?' glit':'')+'" style="background-color:'+c+'">'+(e||'')+'</div>'}
-function burst(p,n){const k=Math.min(14,4+Math.floor(n/10));for(let i=0;i<k;i++){const d=document.createElement('div');d.className='pk fly'+(isGlit(p.id)?' glit':'');d.style.backgroundColor=p.c;d.textContent=p.e||'';d.style.left=lastTap.x+'px';d.style.top=lastTap.y+'px';d.style.setProperty('--dx',(Math.random()*240-120)+'px');d.style.setProperty('--dy',(60+Math.random()*160)+'px');d.style.setProperty('--r',(Math.random()*540-270)+'deg');document.body.appendChild(d);setTimeout(()=>d.remove(),950)}}
+function lightC(c){const h=c.replace('#','');const r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);return (r*299+g*587+b*114)/1000>160}
+function pkSvg(c,e,n,w,h,small){const z=Math.max(3,Math.round(h/12)),t=Math.max(5,Math.round(w/6)),st=w/t;let d='M0 '+z;
+ for(let i=0;i<t;i++)d+=' L'+(i*st+st/2).toFixed(1)+' 0 L'+((i+1)*st).toFixed(1)+' '+z;d+=' L'+w+' '+(h-z);
+ for(let i=t;i>0;i--)d+=' L'+(i*st-st/2).toFixed(1)+' '+h+' L'+((i-1)*st).toFixed(1)+' '+(h-z);d+=' Z';
+ const tc=lightC(c)?'#2b2420':'#ffffff',sh=lightC(c)?'rgba(0,0,0,.35)':'rgba(255,255,255,.65)';
+ let o='<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'"><path d="'+d+'" fill="'+c+'" stroke="rgba(0,0,0,.28)" stroke-width="1"/>'+
+ '<rect x="3" y="'+(z+2)+'" width="'+(w-6)+'" height="'+(h-2*z-4)+'" rx="2" fill="none" stroke="'+sh+'" stroke-width="1" stroke-dasharray="2 2"/>';
+ const fs=small?Math.max(5,h*0.16):Math.max(6,h*0.15);
+ o+='<text x="'+(w/2)+'" y="'+(z+2+fs)+'" text-anchor="middle" font-family="system-ui" font-weight="900" font-size="'+fs+'" letter-spacing=".8" fill="'+tc+'">PACKET</text>';
+ o+='<text x="'+(w/2)+'" y="'+(small?h*0.72:h*0.6)+'" text-anchor="middle" dominant-baseline="middle" font-size="'+(small?h*0.38:h*0.34)+'">'+(e||'')+'</text>';
+ if(!small&&n){const nm=n.toUpperCase(),nf=Math.max(5.5,h*0.13),max=w-10,est=nm.length*nf*0.62;
+  o+='<text x="'+(w/2)+'" y="'+(h-z-4)+'" text-anchor="middle" font-family="system-ui" font-weight="800" font-size="'+nf+'" fill="'+tc+'"'+(est>max?' textLength="'+max+'" lengthAdjust="spacingAndGlyphs"':'')+'>'+nm+'</text>'}
+ return o+'</svg>'}
+function pk(c,g,e,n,small){return '<div class="pk'+(g?' glit':'')+'">'+(small?pkSvg(c,e,n,44,34,true):pkSvg(c,e,n,66,52,false))+'</div>'}
+function burst(p,n){const k=Math.min(14,4+Math.floor(n/10));for(let i=0;i<k;i++){const d=document.createElement('div');d.className='pk fly'+(isGlit(p.id)?' glit':'');d.innerHTML=pkSvg(p.c,p.e,p.n,34,26,true);d.style.left=lastTap.x+'px';d.style.top=lastTap.y+'px';d.style.setProperty('--dx',(Math.random()*240-120)+'px');d.style.setProperty('--dy',(60+Math.random()*160)+'px');d.style.setProperty('--r',(Math.random()*540-270)+'deg');document.body.appendChild(d);setTimeout(()=>d.remove(),950)}}
 function draw(){
  $('cash').textContent=money(S.cash);$('rate').textContent=money(lastRate)+'/s';$('fame').textContent='Fame '+Math.floor(S.fame);$('royal').textContent='Royalties '+money(royalty())+'/s';
  $('goal').style.width=Math.min(100,S.earned/1e6*100)+'%';
@@ -268,24 +282,24 @@ function draw(){
   h+='<div class="card slot"><div class="name">Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'')+'</div><div class="meta">Buyers take '+(14*demandMult()).toFixed(1)+' staples and '+(1.5*demandMult()).toFixed(1)+' novelties per second of each kind. Run campaigns in the Office.</div></div>';
   h+='<h3>Your packets</h3>';
   ownedList().forEach(p=>{const lc=lineCost(p.id);
-   h+='<div class="card"><div class="row">'+pk(p.c,isGlit(p.id),p.e)+'<div class="grow"><div class="name">'+p.n+(isGlit(p.id)?'<span class="tag gl">GLITTER</span>':'')+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+(evOn(p.id)?'<span class="tag evt">NEWS</span>':'')+'</div><div class="meta">Stock '+num(S.stock[p.id]||0)+' . Lines '+(S.lines[p.id]||0)+' . Cost '+money(costOf(p))+' . Wholesale '+money(priceOf(p))+'</div></div></div>'+
+   h+='<div class="card"><div class="row">'+pk(p.c,isGlit(p.id),p.e,p.n)+'<div class="grow"><div class="name">'+p.n+(isGlit(p.id)?'<span class="tag gl">GLITTER</span>':'')+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+(evOn(p.id)?'<span class="tag evt">NEWS</span>':'')+'</div><div class="meta">Stock '+num(S.stock[p.id]||0)+' . Lines '+(S.lines[p.id]||0)+' . Cost '+money(costOf(p))+' . Wholesale '+money(priceOf(p))+'</div></div></div>'+
    '<div class="btns"><button class="act" data-do="squeeze(\''+p.id+'\')">Squeeze '+tapAmt()+'</button><button class="act alt" '+(S.cash<lc?'disabled':'')+' data-do="buyLine(\''+p.id+'\')">Line '+money(lc)+'</button><button class="act ok" '+(isGlit(p.id)||S.cash<glitCost(p)?'disabled':'')+' data-do="glitter(\''+p.id+'\')">'+(isGlit(p.id)?'Glittered':'Glitter '+money(glitCost(p)))+'</button></div></div>'});
   h+='<div class="flav" style="padding:4px">Wholesale buyers take staples fast and novelties slowly. Margins are thin. That is the whole point.</div>';
  }
  if(tab==='lab'){
-  if(S.rd){const p=byId(S.rd.id);h+='<div class="card slot"><div class="row">'+pk(p.c,false,p.e)+'<div class="grow"><div class="name">Researching '+p.n+'</div><div class="meta">'+Math.ceil(S.rd.left)+'s left</div><div class="bar"><i style="width:'+(100-S.rd.left/S.rd.tot*100)+'%"></i></div></div></div></div>'}
+  if(S.rd){const p=byId(S.rd.id);h+='<div class="card slot"><div class="row">'+pk(p.c,false,p.e,p.n)+'<div class="grow"><div class="name">Researching '+p.n+'</div><div class="meta">'+Math.ceil(S.rd.left)+'s left</div><div class="bar"><i style="width:'+(100-S.rd.left/S.rd.tot*100)+'%"></i></div></div></div></div>'}
   else h+='<div class="card slot"><div class="name">Lab is idle</div><div class="meta">Pick a packet below to invent.</div><div class="bar"><i></i></div></div>';
   h+='<h3>Next big packet</h3>';
   const avail=P.filter(p=>p.tier>0&&!S.owned[p.id]);
   avail.slice(0,5).forEach(p=>{const ok=!p.req||p.req.every(r=>S.owned[r]);
-   h+='<div class="card"><div class="row">'+pk(ok?p.c:'#ddd',false,ok?p.e:'?')+'<div class="grow"><div class="name">'+p.n+'</div><div class="meta">'+money(p.rd)+' . '+p.t+'s . absurdity '+p.tier+'</div><div class="flav">'+(ok?p.f:'Needs '+p.req.map(r=>byId(r).n).join(' and ')+' first.')+'</div></div></div>'+
+   h+='<div class="card"><div class="row">'+pk(ok?p.c:'#dddddd',false,ok?p.e:'?',ok?p.n:'???')+'<div class="grow"><div class="name">'+p.n+'</div><div class="meta">'+money(p.rd)+' . '+p.t+'s . absurdity '+p.tier+'</div><div class="flav">'+(ok?p.f:'Needs '+p.req.map(r=>byId(r).n).join(' and ')+' first.')+'</div></div></div>'+
    '<div class="btns"><button class="act ok" '+(!ok||S.rd||S.cash<p.rd?'disabled':'')+' data-do="startRD(\''+p.id+'\')">Invent</button></div></div>'});
   if(!avail.length)h+='<div class="card">Every packet that should not exist now exists.</div>';
  }
  if(tab==='gallery'){
   if(!galleryOpen())h+='<div class="card">Invent 3 new packets to open the Packet Gallery.</div>';
   else{h+='<div class="card"><div class="name">Flat price, any packet</div><div class="big" id="flatv">'+money(S.flat)+'</div><input type="range" min="0.05" max="3" step="0.05" value="'+S.flat+'" oninput="setFlat(this.value)"><div class="meta" id="custv">'+custRate().toFixed(2)+' customers per second</div><div class="flav">Each customer grabs a handful of 10 to 40 packets, any mix, one price each. More kinds stocked means more customers.</div></div>';
-   h+='<div class="card"><div class="name">On the shelf: '+variety()+' kinds</div><div class="shelf">'+ownedList().map(p=>'<div class="bin">'+pk((S.stock[p.id]||0)>=1?p.c:'#eee',isGlit(p.id),p.e)+num(S.stock[p.id]||0)+'</div>').join('')+'</div></div>';}
+   h+='<div class="card"><div class="name">On the shelf: '+variety()+' kinds</div><div class="shelf">'+ownedList().map(p=>'<div class="bin">'+pk((S.stock[p.id]||0)>=1?p.c:'#eeeeee',isGlit(p.id),p.e,p.n,true)+num(S.stock[p.id]||0)+'</div>').join('')+'</div></div>';}
  }
  if(tab==='office'){
   h+='<h3>Marketing campaigns</h3>';
@@ -327,6 +341,7 @@ const FH=56,ROOF=70,GROUND=78,LABW=92,FULL=12;
 function towerFloors(){return ownedList()}
 function towerTap(e){e.preventDefault();lastTap={x:e.clientX,y:e.clientY};const c=$('tw'),r=c.getBoundingClientRect(),y=e.clientY-r.top;
  const fl=towerFloors(),H=ROOF+fl.length*FH+GROUND,i=Math.floor((H-GROUND-y)/FH);if(i>=0&&i<fl.length)squeeze(fl[i].id)}
+function zig(x,a,b,w,h,c){const z=3,t=6,st=w/t;x.beginPath();x.moveTo(a,b+z);for(let i=0;i<t;i++){x.lineTo(a+i*st+st/2,b);x.lineTo(a+(i+1)*st,b+z)}x.lineTo(a+w,b+h-z);for(let i=t;i>0;i--){x.lineTo(a+i*st-st/2,b+h);x.lineTo(a+(i-1)*st,b+h-z)}x.closePath();x.fillStyle=c;x.fill();x.strokeStyle='rgba(0,0,0,.28)';x.lineWidth=1;x.stroke()}
 function rr(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
 function drawTower(t){const c=$('tw');if(!c)return;const fl=towerFloors(),W=c.clientWidth,H=ROOF+fl.length*FH+GROUND,dpr=window.devicePixelRatio||1;
  if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);c.style.height=H+'px'}
@@ -339,8 +354,8 @@ function drawTower(t){const c=$('tw');if(!c)return;const fl=towerFloors(),W=c.cl
  fl.forEach((p,i)=>{const y=H-GROUND-(i+1)*FH,lines=S.lines[p.id]||0,glit=isGlit(p.id);
   x.fillStyle=i%2?'#fbf5ea':'#f4ecdd';x.fillRect(bx,y,bw,FH);x.strokeStyle=glit?'#ffd700':'#d9ccb6';x.lineWidth=glit?3:1.5;x.strokeRect(bx,y,bw,FH);
   // label
-  x.fillStyle=p.c;rr(x,bx+6,y+8,30,24,6);x.fill();x.strokeStyle='rgba(0,0,0,.2)';x.lineWidth=1;x.stroke();
-  x.font='15px system-ui';x.textAlign='center';x.fillText(p.e||'',bx+21,y+21);
+  zig(x,bx+4,y+5,34,30,p.c);x.fillStyle=lightC(p.c)?'#2b2420':'#fff';x.font='900 5.5px system-ui';x.textAlign='center';x.fillText('PACKET',bx+21,y+13);
+  x.font='13px system-ui';x.fillText(p.e||'',bx+21,y+24);
   x.fillStyle='#2b2420';x.font='700 10px system-ui';x.textAlign='left';const nm=p.n.length>13?p.n.slice(0,12)+'.':p.n;x.fillText(nm,bx+4,y+44);
   // room
   const rx=bx+LABW,rw=bw-LABW-6,built=Math.max(.14,Math.min(1,lines/FULL))*rw;
@@ -355,7 +370,7 @@ function drawTower(t){const c=$('tw');if(!c)return;const fl=towerFloors(),W=c.cl
    x.fillStyle=Math.sin(sec*6+m)>0?'#2f9e5b':'#d8432b';x.beginPath();x.arc(mx+5,y+15,2.5,0,7);x.fill()}
   // moving packets
   const n=Math.min(24,lines*2+(S.stock[p.id]>0?1:0)),sp=20+lineRate()*6;
-  for(let k=0;k<n;k++){const px=rx+4+((sec*sp+k*(built/Math.max(1,n)))%(built-16));x.fillStyle=p.c;rr(x,px,cy-9,12,9,2);x.fill();x.strokeStyle='rgba(0,0,0,.3)';x.lineWidth=.8;x.stroke()}
+  for(let k=0;k<n;k++){const px=rx+4+((sec*sp+k*(built/Math.max(1,n)))%(built-16));zig(x,px,cy-10,13,10,p.c)}
   // stock and tags
   x.fillStyle='#2b2420';x.font='700 10px system-ui';x.textAlign='left';x.fillText(num(S.stock[p.id]||0),bx+40,y+15);x.fillStyle='#7a6e66';x.fillText(lines+' lines',bx+40,y+28);
   if(evOn(p.id)||S.hits[p.id]){x.font='800 9px system-ui';x.textAlign='right';x.fillStyle=evOn(p.id)?'#2d6cdf':'#d8432b';x.fillText(evOn(p.id)?'NEWS':'HIT',rx+rw-3,y+FH-3)}
