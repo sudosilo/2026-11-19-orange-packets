@@ -52,6 +52,7 @@ h3{margin:14px 4px 4px;font-size:14px;color:var(--muted);text-transform:uppercas
 .meta2{color:var(--ink);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:16px}
 button.act.mini{flex:0 0 50px;font-size:12px}
 button.act.stop{background:#7a6e66}
+button.act.hold{background:#e0a400}
 .tower{border:2px solid var(--line);border-radius:14px;overflow:hidden;background:#eaf4ff}
 .roof{height:54px;background:linear-gradient(#cfe8ff,#eaf4ff);position:relative}
 .roof:before{content:'';position:absolute;left:0;right:0;bottom:0;height:30px;background:#d8432b;clip-path:polygon(0 100%,50% 0,100% 100%)}
@@ -321,6 +322,12 @@ const EVENTS=[
  {n:'National Mustard Day',b:'A holiday nobody asked for. Somehow everyone celebrates.',ids:['mustard'],cost:1,price:1.6,dem:6},
  {n:'Cheese Cave Flood',b:'The great cheese caves are underwater. Cheese prices go feral.',ids:['cheese','mac'],cost:3,price:2,dem:1},
  {n:'Pickle Shortage',b:'Cucumbers refuse to pickle this year. Scientists are baffled.',ids:['pickle','spickle'],cost:2.5,price:2.2,dem:1},
+ {n:'Safety Investigation',b:'Inspectors are poking around {x}. Sales are frozen. You can still make it, so stock up for later.',rand:1,dem:0},
+ {n:'Market Crash',b:'The bottom fell out of the {x} market. Buyers pay pennies. Hold your stock until it recovers.',rand:1,price:.15},
+ {n:'Haunted Packet Rumor',b:'A rumor says {x} packets are haunted. Almost nobody is buying.',rand:2,dem:.05},
+ {n:'Packet Frenzy',b:'Everybody suddenly wants {x}. Prices tripled. Anyone holding stock cleans up.',rand:1,price:3,dem:3},
+ {n:'Collector Craze',b:'Collectors are hoarding {x}. Big prices for anyone with stock on hand.',rand:2,price:2.5,dem:2},
+ {n:'Trucker Strike',b:'Wholesale truckers walked off the job. Every packet ships at a crawl.',all:1,dem:.25},
  {n:'Ketchup Recall Panic',b:'A rival ketchup recall sends shoppers running to your ketchup.',ids:['ketchup'],cost:1,price:1.3,dem:4}
 ];
 const MILES=['You are the ketchup guy now','Condiment Billionaire','Sauce Sovereign','Packet Emperor','Galactic Squeezer','Multiversal Mustard Lord','Ruler of All Packets'];
@@ -387,7 +394,7 @@ function finishRD(){const p=byId(S.rd.id);S.owned[p.id]=1;bumpOwned();S.lines[p.
  if(novelCount()===MIXN){pop('THE 50/50 MACHINE IS ONLINE','Spin it to invent a brand new half and half flavor. Each one becomes a new floor in your tower.')}
  if(galleryOpen()&&novelCount()===3){pop('THE PACKET GALLERY IS OPEN','Customers grab handfuls of whatever they want and pay one flat price per packet. More kinds on the shelf brings more people.');$('galTab').classList.remove('lock')}
  draw()}
-function evFx(id,k){let m=1;(S.events||[]).forEach(e=>{if(e.ids.includes(id))m*=e[k]});return m}
+function evFx(id,k){let m=1;(S.events||[]).forEach(e=>{if(e.all||e.ids.includes(id))m*=e[k]});return m}
 const STYLES=[{n:'Standard',b:''},{n:'Glitter',b:'Glitter',req:0,cm:2.5,pm:4,col:'#ffd700'},{n:'Foil',b:'Foil',req:25,cm:4,pm:8,col:'#9aa7b0'},{n:'Holographic',b:'Holo',req:50,cm:7,pm:16,col:'#b388ff'},{n:'Movie Promo',b:'Movie',req:100,cm:12,pm:32,col:'#222222'},{n:'Pop Star',b:'Pop Star',req:200,cm:20,pm:64,col:'#ff4fa3'},{n:'Glow in the Dark',b:'Glow',req:400,cm:35,pm:128,col:'#39ff14'}];
 function lvl(id){S.style=S.style||{};if(S.style[id]==null&&S.glit&&S.glit[id])S.style[id]=1;return S.style[id]||0}
 function isGlit(id){return lvl(id)>0}
@@ -400,12 +407,13 @@ function glitter(id){ascend(id)}
 function styleBtn(p){const l=lvl(p.id),nx=l+1;if(nx>=STYLES.length)return '<button class="act ok" disabled>MAX STYLE</button>';const st=STYLES[nx],c=styleCost(p,nx);
  if((S.lines[p.id]||0)<st.req)return '<button class="act ok" disabled>'+st.b+' '+st.req+'L</button>';
  return '<button class="act ok" '+(S.cash<c?'disabled':'')+' data-do="ascend(\''+p.id+'\')">'+st.b+' '+money(c)+'</button>'}
-function evOn(id){return (S.events||[]).some(e=>e.ids.includes(id))}
+function evOn(id){return (S.events||[]).some(e=>e.all||e.ids.includes(id))}
 let lastTap={x:innerWidth/2,y:innerHeight/2};
-function fireEvent(){const pool=EVENTS.filter(e=>e.ids.some(id=>S.owned[id])&&!(S.events||[]).some(x=>x.n===e.n));if(!pool.length)return;
- const e=pool[Math.floor(Math.random()*pool.length)];S.events=S.events||[];S.events.push({n:e.n,ids:e.ids,cost:e.cost,price:e.price,dem:e.dem,left:120});
+function randTargets(k){const L=ownedList().filter(p=>(S.lines[p.id]||0)>0).sort((a,b)=>pr(b.id).m-pr(a.id).m).slice(0,12);const out=[];while(L.length&&out.length<k)out.push(L.splice(Math.floor(Math.random()*L.length),1)[0].id);return out}
+function fireEvent(){const busy=ownedList().filter(p=>(S.lines[p.id]||0)>0).length;const pool=EVENTS.filter(e=>(e.all||(e.rand?busy>=e.rand:e.ids.some(id=>S.owned[id])))&&!(S.events||[]).some(x=>x.n===e.n));if(!pool.length)return;
+ const e0=pool[Math.floor(Math.random()*pool.length)],ids=e0.rand?randTargets(e0.rand):(e0.ids||[]),e=Object.assign({},e0,{ids,cost:e0.cost||1,price:e0.price||1,dem:e0.dem==null?1:e0.dem});e.b=e.b.replace('{x}',ids.map(i=>byId(i).n).join(' and '));S.events=S.events||[];S.events.push({n:e.n,ids:e.ids,all:!!e.all,cost:e.cost,price:e.price,dem:e.dem,left:120});
  const fx=[];if(e.cost!==1)fx.push('cost x'+e.cost);if(e.price!==1)fx.push('price x'+e.price);if(e.dem!==1)fx.push('demand x'+e.dem);
- $('evtT').textContent=e.n;$('evtB').textContent=e.b;$('evtF').textContent=e.ids.filter(id=>byId(id)).map(id=>byId(id).n).join(', ')+': '+fx.join(', ')+' for 2 minutes';
+ $('evtT').textContent=e.n;$('evtB').textContent=e.b;$('evtF').textContent=(e.all?'Every packet':e.ids.filter(id=>byId(id)).map(id=>byId(id).n).join(', '))+': '+fx.join(', ')+' for 2 minutes';
  const bait=$('evtBait');bait.style.left=Math.min(innerWidth-80,Math.max(80,lastTap.x))+'px';bait.style.top=Math.max(300,Math.min(innerHeight-60,lastTap.y))+'px';
  $('evt').style.display='block';say('WORLD NEWS: '+e.n)}
 function haha(x,y){const d=document.createElement('div');d.className='haha';d.style.left=x+'px';d.style.top=y+'px';d.innerHTML='hahaha<br><small>you clicked the wrong spot lol</small>';document.body.appendChild(d);setTimeout(()=>d.remove(),1500)}
@@ -442,7 +450,7 @@ function pk(c,g,e,n,small){const l=typeof g==='number'?g:(g?1:0);return '<div cl
 function burst(p,n){const k=Math.min(14,4+Math.floor(n/10));for(let i=0;i<k;i++){const d=document.createElement('div');d.className='pk fly'+(lvl(p.id)?' glit s'+lvl(p.id):'');d.innerHTML=pkSvg(p.c,p.e,p.short||p.n,34,26,true);d.style.left=lastTap.x+'px';d.style.top=lastTap.y+'px';d.style.setProperty('--dx',(Math.random()*240-120)+'px');d.style.setProperty('--dy',(60+Math.random()*160)+'px');d.style.setProperty('--r',(Math.random()*540-270)+'deg');document.body.appendChild(d);setTimeout(()=>d.remove(),950)}}
 function fTags(p){const l=lvl(p.id);return p.n+(l?'<span class="tag '+(l===1?'gl':'st')+'">'+STYLES[l].b.toUpperCase()+'</span>':'')+(S.hits[p.id]?'<span class="tag hit">HIT</span>':'')+(p.tier===0?'<span class="tag">staple</span>':'')+(p.combo?'<span class="tag st">50/50</span>':'')+(evOn(p.id)?'<span class="tag evt">NEWS</span>':'')}
 function fM1(p){return 'Stock '+num(S.stock[p.id]||0)+' . Lines '+num(S.lines[p.id]||0)+' . Cost '+money(costOf(p))+' . Wholesale '+money(priceOf(p))}
-function fM2(p){return (isPaused(p.id)?'<span style="color:#d8432b">STOPPED</span> . ':'')+'Made '+big(pr(p.id).m,1)+'/s . <span style="color:'+(pr(p.id).p<0?'#d8432b':'#2f9e5b')+'">Profit '+(pr(p.id).p<0?'-':'')+money(Math.abs(pr(p.id).p))+'/s</span>'}
+function fM2(p){return modeTag(p.id)+'Made '+big(pr(p.id).m,1)+'/s . <span style="color:'+(pr(p.id).p<0?'#d8432b':'#2f9e5b')+'">Profit '+(pr(p.id).p<0?'-':'')+money(Math.abs(pr(p.id).p))+'/s</span>'}
 function fLine(p){const lc=lineCost(p.id);return '<button class="act alt" '+(S.cash<lc?'disabled':'')+' data-do="buyLine(\''+p.id+'\')">'+(lineQty(p.id)>1?'+'+num(lineQty(p.id))+' ':'Line ')+money(lc)+'</button>'}
 function fCard(p,f){const k=(f?f+'_':'')+p.id;return '<div class="card'+(f?' nest':'')+'"><div class="row">'+pk(p.c,lvl(p.id),p.e,p.short||p.n)+'<div class="grow"><div class="name" id="n_'+k+'">'+fTags(p)+'</div><div class="meta" id="a_'+k+'">'+fM1(p)+'</div><div class="meta2" id="b_'+k+'">'+fM2(p)+'</div></div></div>'+
  '<div class="btns"><button class="act" data-do="squeeze(\''+p.id+'\')">Squeeze '+tapAmt()+'</button><span id="p_'+k+'" style="display:contents">'+fPause(p)+'</span><span id="l_'+k+'" style="display:contents">'+fLine(p)+'</span><span id="g_'+k+'" style="display:contents">'+styleBtn(p)+'</span></div>'+
@@ -450,9 +458,13 @@ function fCard(p,f){const k=(f?f+'_':'')+p.id;return '<div class="card'+(f?' nes
 let fLim=200;
 function moreCards(){fLim+=200;fSig='';draw()}
 function fEntries(){const out=[];factoryList().slice(0,fLim).forEach(p=>{out.push([p,'']);if(!p.combo&&openSet.has(p.id))mixesOf(p.id).forEach(m=>out.push([m,p.id]))});return out}
-function isPaused(id){return !!(S.paused&&S.paused[id])}
-function togglePause(id){S.paused=S.paused||{};S.paused[id]=!S.paused[id];say(byId(id).n+(S.paused[id]?' lines stopped. No more goop spent.':' lines running again.'));draw()}
-function fPause(p){return '<button class="act mini '+(isPaused(p.id)?'ok':'stop')+'" data-do="togglePause(\''+p.id+'\')">'+(isPaused(p.id)?'Run':'Stop')+'</button>'}
+function modeOf(id){S.mode=S.mode||{};if(S.mode[id]==null&&S.paused&&S.paused[id])S.mode[id]=2;return S.mode[id]||0}
+function isPaused(id){return modeOf(id)===2}
+function isHeld(id){return modeOf(id)===1}
+const MODES=['Run','Hold','Stop'],MSAY=[' back to making and selling.',' on hold. Still making it, not selling it.',' stopped. Not making it, still selling stock.'];
+function togglePause(id){const m=(modeOf(id)+1)%3;S.mode[id]=m;if(S.paused)delete S.paused[id];say(byId(id).n+MSAY[m]);draw()}
+function fPause(p){const m=modeOf(p.id);return '<button class="act mini '+['ok','hold','stop'][m]+'" data-do="togglePause(\''+p.id+'\')">'+MODES[m]+'</button>'}
+function modeTag(id){const m=modeOf(id);return m===2?'<span style="color:#d8432b">STOPPED</span> . ':m===1?'<span style="color:#b07800">HOLDING</span> . ':''}
 function setH(id,v){const e=document.getElementById(id);if(e&&e.innerHTML!==v)e.innerHTML=v}
 function patchFactory(){$('dem').innerHTML='Wholesale demand x'+demandMult().toFixed(2)+(S.camp?'<span class="tag hit">'+S.camp.n+'</span>':'');fEntries().forEach(([p,f])=>{const k=(f?f+'_':'')+p.id;setH('n_'+k,fTags(p));setH('a_'+k,fM1(p));setH('b_'+k,fM2(p));setH('l_'+k,fLine(p));setH('g_'+k,styleBtn(p));setH('p_'+k,fPause(p));if(!f&&!p.combo&&mixesOf(p.id).length)setH('fd_'+p.id,ddLabel(p.id))})}
 let fSig='';
@@ -522,13 +534,13 @@ document.querySelector('nav').addEventListener('click',e=>{const b=e.target.clos
 let before=S.cash,secAcc=0,earnSec=0;
 function tick(dt){
  let gain=0;
- {const LRt=lineRate()*dt,DM=demandMult()*dt,EV=(S.events||[]).length,PS=S.paused||{},ST=S.style||{};
+ {const LRt=lineRate()*dt,DM=demandMult()*dt,EV=(S.events||[]).length,MD=S.mode||{},PS=S.paused||{},ST=S.style||{};
  const OL=ownedList();for(let i=0;i<OL.length;i++){const p=OL[i],id=p.id,ln=S.lines[id]||0,stk=S.stock[id]||0;if(!ln&&stk<=0)continue;
   const l=ST[id]||0,sm=l?STYLES[l]:null,ec=EV?evFx(id,'cost'):1,ep=EV?evFx(id,'price'):1,ed=EV?evFx(id,'dem'):1;
-  let st=stk;if(ln&&!PS[id]){const n=ln*LRt,c=n*p.cost*ec*(sm?sm.cm:1);if(S.cash>=c){S.cash-=c;gain-=c;st+=n;madeAcc+=n;const A=pa(id);A.m+=n;A.c+=c}}
-  if(st>0){const cap=(p.tier===0?14:1.5)*DM*ed,sold=Math.min(st,cap);st-=sold;soldAcc+=sold;const r=sold*p.price*ep*(sm?sm.pm:1);pa(id).r+=r;S.cash+=r;gain+=r;S.earned+=r}
+  let st=stk;if(ln&&MD[id]!==2&&!(MD[id]==null&&PS[id])){const n=ln*LRt,c=n*p.cost*ec*(sm?sm.cm:1);if(S.cash>=c){S.cash-=c;gain-=c;st+=n;madeAcc+=n;const A=pa(id);A.m+=n;A.c+=c}}
+  if(st>0&&MD[id]!==1){const cap=(p.tier===0?14:1.5)*DM*ed,sold=Math.min(st,cap);st-=sold;soldAcc+=sold;const r=sold*p.price*ep*(sm?sm.pm:1);pa(id).r+=r;S.cash+=r;gain+=r;S.earned+=r}
   S.stock[id]=st}}
- if(galleryOpen()){cAcc+=custRate()*dt;const cust=Math.floor(cAcc);if(cust>=1){cAcc-=cust;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1);
+ if(galleryOpen()){cAcc+=custRate()*dt;const cust=Math.floor(cAcc);if(cust>=1){cAcc-=cust;const shelf=ownedList().filter(p=>(S.stock[p.id]||0)>=1&&!isHeld(p.id));
   if(shelf.length){let want=cust<=20?Array.from({length:cust},()=>10+Math.floor(Math.random()*31)).reduce((a,b)=>a+b,0):cust*25,got=0;
    const per=want/shelf.length;shelf.forEach(p=>{const take=Math.min(S.stock[p.id],per);S.stock[p.id]-=take;got+=take;pa(p.id).r+=take*S.flat});
    soldAcc+=got;const r=got*S.flat;S.cash+=r;gain+=r;S.earned+=r;S.fame+=got*0.002}}}
@@ -556,7 +568,7 @@ function mixProfit(id){return mixesOf(id).reduce((a,m)=>a+pr(m.id).p,0)}
 function otherHalf(m,id){const o=m.a===id?m.b:m.a;return byId(o)}
 function mrow(m,fid){const o=otherHalf(m,fid),k=fid+'_'+m.id;return '<div class="mrow">'+pk(m.c,lvl(m.id),m.e,m.short,true)+'<div class="grow"><div class="name">+ '+o.n+'</div><div class="meta" id="tm_'+k+'">'+mrowMeta(m)+'</div></div>'+
  '<span id="tp_'+k+'" style="display:contents">'+fPause(m)+'</span><span id="tl_'+k+'" style="display:contents">'+fLine(m)+'</span></div>'}
-function mrowMeta(m){return (isPaused(m.id)?'<span style="color:#d8432b">STOPPED</span> . ':'')+'Lines '+num(S.lines[m.id]||0)+' . Stock '+num(S.stock[m.id]||0)+' . <span style="color:'+(pr(m.id).p<0?'#d8432b':'#2f9e5b')+'">'+(pr(m.id).p<0?'-':'')+money(Math.abs(pr(m.id).p))+'/s</span>'}
+function mrowMeta(m){return modeTag(m.id)+'Lines '+num(S.lines[m.id]||0)+' . Stock '+num(S.stock[m.id]||0)+' . <span style="color:'+(pr(m.id).p<0?'#d8432b':'#2f9e5b')+'">'+(pr(m.id).p<0?'-':'')+money(Math.abs(pr(m.id).p))+'/s</span>'}
 function ddLabel(id){const ms=mixesOf(id),pf=mixProfit(id);return (openSet.has(id)?'▾ ':'▸ ')+ms.length+(ms.length===1?' mix':' mixes')+' . <span style="color:'+(pf<0?'#d8432b':'#2f9e5b')+'">'+(pf<0?'-':'')+money(Math.abs(pf))+'/s</span>'}
 function towerHTML(){const fl=towerFloors().slice().reverse();let h='<div class="twhint">Tap a floor to squeeze. Floor length shows lines compared to your biggest floor.</div><div class="tower"><div class="roof"><span>PACKET BARON TOWER</span></div>';
  fl.forEach(p=>{const ms=mixesOf(p.id).length;h+='<div class="fl"><canvas class="flc" data-id="'+p.id+'"></canvas>';
