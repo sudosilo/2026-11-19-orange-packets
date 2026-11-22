@@ -636,7 +636,17 @@ function drawFloor(c,sec){const p=byId(c.dataset.id);if(!p)return;const [x,W]=fi
   const n=isPaused(p.id)?0:Math.min(24,lines*2+(S.stock[p.id]>0?1:0)),sp=20+lineRate()*6;
   for(let k=0;k<n;k++){const px=rx+4+((sec*sp+k*(built/Math.max(1,n)))%(built-16));zig(x,px,cy-10,13,10,p.c)}
   x.fillStyle='#2b2420';x.font='700 10px system-ui';x.textAlign='left';x.fillText(num(S.stock[p.id]||0),bx+40,y+15);x.fillStyle='#7a6e66';x.fillText(num(lines)+' lines',bx+40,y+28);
-  if(evOn(p.id)||S.hits[p.id]){x.font='800 9px system-ui';x.textAlign='right';x.fillStyle=evOn(p.id)?'#2d6cdf':'#d8432b';x.fillText(evOn(p.id)?'NEWS':'HIT',rx+rw-3,y+FH-5)}}
+  drawPallets(x,p,rx+rw-4,y+FH-7);
+  if(evOn(p.id)||S.hits[p.id]){x.font='800 9px system-ui';x.textAlign='right';x.fillStyle=evOn(p.id)?'#2d6cdf':'#d8432b';x.fillText(evOn(p.id)?'NEWS':'HIT',rx+rw-3,y+13)}}
+const PALLET=1e6,PCOL=6;
+function drawPallets(x,p,right,base){const st=S.stock[p.id]||0;if(st<1)return;const full=Math.floor(st/PALLET),part=(st-full*PALLET)/PALLET,tot=full+(part>0.001?1:0),show=Math.min(tot,PCOL*2),PW=17,PH=12,BH=3;
+ x.fillStyle='rgba(255,255,255,.85)';x.fillRect(right-Math.min(PCOL,Math.ceil(show/2))*(PW+2)-4,base-2*(PH+BH)-4,Math.min(PCOL,Math.ceil(show/2))*(PW+2)+6,2*(PH+BH)+6);
+ for(let i=0;i<show;i++){const col=Math.floor(i/2),row=i%2,px=right-(col+1)*(PW+2),py=base-(row+1)*(PH+BH),isPart=i===show-1&&tot===show&&part>0.001,f=isPart?part:1;
+  x.fillStyle='#a0703f';x.fillRect(px,py+PH,PW,BH);x.fillStyle='#6e4a26';x.fillRect(px+1,py+PH+BH-1,3,1);x.fillRect(px+PW-4,py+PH+BH-1,3,1);
+  x.strokeStyle='rgba(0,0,0,.3)';x.lineWidth=1;x.strokeRect(px+1.5,py+.5,PW-3,PH-.5);
+  x.fillStyle=p.c.split('|')[0];x.fillRect(px+2,py+1+(PH-1)*(1-f),PW-4,(PH-1)*f);
+  x.strokeStyle='rgba(0,0,0,.18)';x.beginPath();x.moveTo(px+2,py+PH/2);x.lineTo(px+PW-2,py+PH/2);x.moveTo(px+PW/2,py+1);x.lineTo(px+PW/2,py+PH);x.stroke()}
+ const lab=(st/PALLET>=10?Math.round(st/PALLET):(st/PALLET).toFixed(1))+' pal';x.fillStyle='#2b2420';x.font='800 9px system-ui';x.textAlign='right';x.fillText(lab+(tot>show?' +':''),right-Math.min(PCOL,Math.ceil(show/2))*(PW+2)-8,base-14)}
 function drawGround(c,sec){const [x,W]=fitC(c,60);x.clearRect(0,0,W,60);x.fillStyle='#e8d8bd';x.fillRect(0,0,W,44);x.fillStyle='#7cb65a';x.fillRect(0,44,W,16);
  const open=galleryOpen();x.fillStyle=open?'#d8432b':'#7a6e66';rr(x,W/2-80,6,160,20,5);x.fill();x.fillStyle='#fff';x.font='800 11px system-ui';x.textAlign='center';x.textBaseline='middle';x.fillText(open?'PACKET GALLERY':'LOADING DOCK',W/2,16);
  x.fillStyle='#8fc1ec';x.fillRect(W/2-16,28,32,16);if(open){const cr=Math.min(6,Math.ceil(custRate()));for(let k=0;k<cr;k++){x.font='13px system-ui';x.fillText('🧍',(sec*40+k*70)%W,36)}}}
